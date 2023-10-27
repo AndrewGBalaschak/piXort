@@ -10,8 +10,8 @@ print(globals.original_image.mode)
 print(globals.original_image.size)
 
 # Sort the image and display
-sort_pixels.sort_value(50, 0.5, 0.25, False, False)
+sort_pixels.sort_value(50, 0.5, 0.25, True, False)
 sort_pixels.apply_sort()
 sort_pixels.sort_value(5, 1, 0.1, False, True)
 globals.sorted_image.show()
-globals.sorted_image.save('images\image1-sorted2.png')
+globals.sorted_image.save('images\image1-sorted.png')
