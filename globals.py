@@ -2,6 +2,7 @@
 original_image = None
 sorted_image = None
 display_image = None
+empty_image = None
 
 # Thumbnail size
-thumb_size = (512, 512)
+thumb_size = (512,512)
