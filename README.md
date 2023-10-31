@@ -21,14 +21,14 @@ piXort splits an image into segments and performs the sorting operation on each 
 - **Shuffle** - Shuffles the image segments based on previous parameters.
 - **Apply** - Bakes the sorting or shuffling into the image and allows another operation to be performed on top. (Note: this does not save the image to your drive)
 
-![](/images/gui.png)
+![](/examples/gui.png)
 
 ## Example Images
 Input                    |  Output
 :-----------------------:|:-------------------------:
-![](/images/image1.png)  |  ![](/images/image1-sorted.png)
-![](/images/image2.png)  |  ![](/images/image2-sorted.png)
-![](/images/image3.png)  |  ![](/images/image3-sorted.png)
+![](/examples/image1.png)  |  ![](/examples/image1-sorted.png)
+![](/examples/image2.png)  |  ![](/examples/image2-sorted.png)
+![](/examples/image3.png)  |  ![](/examples/image3-sorted.png)
 
 ## To-Do
 - Application icon
