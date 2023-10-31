@@ -1,16 +1,23 @@
-from colorsys import rgb_to_hsv, hsv_to_rgb
+import tkinter as tk
+from tkinter import ttk
+from tkinter import filedialog
+from ttkthemes import ThemedTk
 from PIL import Image
 import random
-import threading
+import numpy as np
 
 # Import global image variables
 import globals
 
 # Sorts pixels in segments by value/lightness
-def sort_value(segment_size: int, segment_random: float, segment_probability: float, is_sort: bool, is_vertical: bool):
+def sort_value(segment_size: int, segment_random: float, segment_probability: float, orientation: str, is_sort: bool, invert_sort: bool, sort_criteria: str):
     # Rotate 90 degrees for vertical sorting
-    if(is_vertical):
+    if(orientation == 'Vertical'):
         globals.original_image = globals.original_image.transpose(method=Image.Transpose.ROTATE_90)
+
+    # If we are being trolled
+    if(segment_size==0):
+        return
 
     # Load pixel data
     globals.sorted_image = globals.original_image.copy()
@@ -19,6 +26,7 @@ def sort_value(segment_size: int, segment_random: float, segment_probability: fl
     # Get dimensions
     width, height = globals.sorted_image.size
 
+    # Loop through rows
     for y in range(height):
         row = []
         # Get current row of pixels
@@ -35,7 +43,18 @@ def sort_value(segment_size: int, segment_random: float, segment_probability: fl
             # Check if segment is to be sorted
             if (random.random() < segment_probability):
                 if (is_sort):
-                    row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size])
+                    if(sort_criteria == 'Hue'):
+                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_hue, reverse=invert_sort)
+                    elif(sort_criteria == 'Saturation'):
+                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_sat, reverse=invert_sort)
+                    elif(sort_criteria == 'Luminance'):
+                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_lum, reverse=invert_sort)
+                    elif(sort_criteria == 'Red'):
+                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_red, reverse=invert_sort)
+                    elif(sort_criteria == 'Green'):
+                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_grn, reverse=invert_sort)
+                    elif(sort_criteria == 'Blue'):
+                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_blu, reverse=invert_sort)
                 else:
                     copy = row[x:x+temp_segment_size].copy()
                     random.shuffle(copy)
@@ -55,19 +74,75 @@ def sort_value(segment_size: int, segment_random: float, segment_probability: fl
     globals.sorted_image.putdata(sorted_pixels)
 
     # Correct rotation
-    if(is_vertical):
+    if(orientation == 'Vertical'):
         globals.original_image = globals.original_image.transpose(method=Image.Transpose.ROTATE_270)
         globals.sorted_image = globals.sorted_image.transpose(method=Image.Transpose.ROTATE_270)
 
-# Sorts pixels by color
-def sort_hue():
-    pixels = list(globals.original_image.getdata())
-    pixels_hsv = [rgb_to_hsv(*pixel[:3]) for pixel in pixels]
-    sorted_pixels_hsv = sorted(pixels_hsv, key=lambda x: x[0])
-    sorted_pixels = [tuple(int(c * 255) for c in hsv_to_rgb(*hsv)) for hsv in sorted_pixels_hsv]
+# Returns the hue of a pixel
+def get_hue(pixel):
+    R = pixel[0] / 255
+    G = pixel[1] / 255
+    B = pixel[2] / 255
 
-    globals.sorted_image = Image.new('Hue', globals.original_image.size)
-    globals.sorted_image.putdata(sorted_pixels)
+    max_val = max(R, G, B)
+    min_val = min(R, G, B)
+    hue = 0
+
+    if(R > G and R > B):
+        hue = (G - B) / (max_val - min_val)
+    if(G > R and G > B):
+        hue = 2 + (B - R) / (max_val - min_val)
+    if(B > R and B > G):
+        hue = 4 + (R - G) / (max_val - min_val)
+    
+    hue = hue * 60
+
+    if(hue < 0):
+        hue += 360
+    
+    return hue
+
+# Returns the saturation of a pixel
+def get_sat(pixel):
+    R = pixel[0] / 255
+    G = pixel[1] / 255
+    B = pixel[2] / 255
+        
+    max_val = max(R, G, B)
+    min_val = min(R, G, B)
+
+    if max_val == min_val:
+        return 0
+    
+    lum = get_lum(pixel)
+
+    if lum <= 0.5:
+        return (max_val-min_val)/(max_val+min_val)
+    else:
+        return (max_val-min_val)/(2.0-max_val-min_val)
+
+# Returns the luminance of a pixel
+def get_lum(pixel):
+    R = pixel[0] / 255
+    G = pixel[1] / 255
+    B = pixel[2] / 255
+    
+    max_val = max(R, G, B)
+    min_val = min(R, G, B)
+
+    return (max_val + min_val) / 2
+
+# Returns the Red of a pixel
+def get_red(pixel):
+    return pixel[0] / 255
+
+# Returns the Green of a pixel
+def get_grn(pixel):
+    return pixel[1] / 255
+
+# Returns the Blue of a pixel
+def get_blu(pixel):
+    return pixel[2] / 255
 
 # Applies the sort and allows the sorted image to be sorted again
 def apply_sort():
