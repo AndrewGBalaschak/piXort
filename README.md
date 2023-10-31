@@ -1,13 +1,6 @@
 # piXort
 piXort is a simple python application that allows you to sort, shuffle, and generally corrupt images in a stylistic way
 
-## Example
-Input                    |  Output
-:-----------------------:|:-------------------------:
-![](/images/image1.png)  |  ![](/images/image1-sorted.png)
-![](/images/image2.png)  |  ![](/images/image2-sorted.png)
-![](/images/image3.png)  |  ![](/images/image3-sorted.png)
-
 ## How-to
 piXort splits an image into segments and performs the sorting operation on each segment.
 
@@ -29,6 +22,13 @@ piXort splits an image into segments and performs the sorting operation on each 
 - **Apply** - Bakes the sorting or shuffling into the image and allows another operation to be performed on top. (Note: this does not save the image to your drive)
 
 ![](/images/gui.png)
+
+## Example Images
+Input                    |  Output
+:-----------------------:|:-------------------------:
+![](/images/image1.png)  |  ![](/images/image1-sorted.png)
+![](/images/image2.png)  |  ![](/images/image2-sorted.png)
+![](/images/image3.png)  |  ![](/images/image3-sorted.png)
 
 ## To-Do
 - Application icon
