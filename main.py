@@ -135,7 +135,7 @@ edit_menu = tk.Menu(menubar, tearoff=False)
 edit_menu.add_command(label='Undo', command=undo, accelerator='Ctrl+Z')
 edit_menu.add_command(label='Redo', command=redo, accelerator='Ctrl+Y')
 edit_menu.add_separator()
-edit_menu.add_command(label='Reset', command=redo, accelerator='Ctrl+R')
+edit_menu.add_command(label='Reset', command=reset, accelerator='Ctrl+R')
 menubar.add_cascade(label='Edit', menu=edit_menu)
 
 help_menu = tk.Menu(menubar, tearoff=False)
@@ -266,11 +266,10 @@ sort_direction_label = ttk.Label(sort_frame, text='Sort Direction:')
 sort_direction_label.grid(row=8, column=0, rowspan=2, sticky='E')
 
 sort_direction_var = tk.BooleanVar()
-sort_direction_low = ttk.Radiobutton(sort_frame, text='Low to High', variable=sort_direction_var, value=False)
-sort_direction_high = ttk.Radiobutton(sort_frame, text='High to Low', variable=sort_direction_var, value=True)
+sort_direction_low = ttk.Radiobutton(sort_frame, text='Standard', variable=sort_direction_var, value=False)
+sort_direction_high = ttk.Radiobutton(sort_frame, text='Inverted', variable=sort_direction_var, value=True)
 sort_direction_low.grid(row=8, column=1, sticky='W')
 sort_direction_high.grid(row=9, column=1, sticky='W')
-
 
 #################### ---------- RENDER FRAME ---------- ####################
 # Frame for render buttons
@@ -278,8 +277,8 @@ render_frame = ttk.Frame(root)
 render_frame.grid(row=2, column=0, sticky='NSEW')
 
 # Create buttons for rendering
-sort_button = ttk.Button(render_frame, text='Preview Sort', width=20, command=lambda:[sort_pixels.sort_value(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get(), True, sort_direction_var.get(), sort_criteria_var.get()), update_display()])
-shuffle_button = ttk.Button(render_frame, text='Preview Shuffle', width=20, command=lambda:[sort_pixels.sort_value(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get(), False, sort_direction_var.get(), sort_criteria_var.get()), update_display()])
+sort_button = ttk.Button(render_frame, text='Preview Sort', width=20, command=lambda:[sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get()), sort_pixels.sort_pixels(sort_direction_var.get(), sort_criteria_var.get()), update_display()])
+shuffle_button = ttk.Button(render_frame, text='Preview Shuffle', width=20, command=lambda:[sort_pixels.sort_pixels(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get(), sort_direction_var.get(), sort_criteria_var.get()), update_display()])
 apply_button = ttk.Button(render_frame, text='Apply', width=44, command=sort_pixels.apply_sort)
 sort_button.grid(row=0, column=0)
 shuffle_button.grid(row=0, column=1)

@@ -9,8 +9,126 @@ import numpy as np
 # Import global image variables
 import globals
 
+segments = []               # Stores the segments of an image
+segments_mask = []          # Mask of whether a segment gets processed or not
+segment_orientation = ''    # Stores orientation of segments
+
+def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str):
+    # Clear old segments
+    segments.clear()
+    segments_mask.clear()
+    
+    # Use global segment orientation
+    global segment_orientation
+
+    # Rotate 90 degrees for vertical segments
+    if(orientation == 'Vertical'):
+        globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
+        segment_orientation = 'Vertical'
+    else:
+        segment_orientation = 'Horizontal'
+
+    # If we are being trolled
+    if(segment_size==0):
+        return
+
+    # Load pixel data
+    globals.sort_output = globals.sort_input.copy()
+    pixels = globals.sort_output.load()
+
+    # Get dimensions
+    width, height = globals.sort_output.size
+
+    # Loop through rows
+    for y in range(height):
+        row = []
+        # Get current row of pixels
+        for x in range(width):
+            row.append(pixels[x, y])
+        
+        # Split row into segments
+        x = 0
+        while (x < width):
+            # Apply segment size randomization
+            temp_segment_size = int(segment_size + ((random.random() - 0.5) * 2 * segment_random * segment_size))
+
+            # Add the segment to the segments array
+            segments.append(row[x:x+temp_segment_size].copy())
+
+            # Check if segment is to be processed, add to segments mask array
+            segments_mask.append(random.random() < segment_probability)
+            
+            # Move to next segment
+            x = x + temp_segment_size
+
+    # Correct rotation
+    if(segment_orientation == 'Vertical'):
+        globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
+
 # Sorts pixels in segments by value/lightness
-def sort_value(segment_size: int, segment_random: float, segment_probability: float, orientation: str, is_sort: bool, invert_sort: bool, sort_criteria: str):
+def sort_pixels(invert_sort: bool, sort_criteria: str):
+    # Loop through segments
+    for i in range(len(segments)):
+        # Check if segment is to be processed
+        if (segments_mask[i]):
+            if(sort_criteria == 'Hue'):
+                segments[i] = sorted(segments[i], key=get_hue, reverse=invert_sort)
+            elif(sort_criteria == 'Saturation'):
+                segments[i] = sorted(segments[i], key=get_sat, reverse=invert_sort)
+            elif(sort_criteria == 'Luminance'):
+                segments[i] = sorted(segments[i], key=get_lum, reverse=invert_sort)
+            elif(sort_criteria == 'Red'):
+                segments[i] = sorted(segments[i], key=get_red, reverse=invert_sort)
+            elif(sort_criteria == 'Green'):
+                segments[i] = sorted(segments[i], key=get_grn, reverse=invert_sort)
+            elif(sort_criteria == 'Blue'):
+                segments[i] = sorted(segments[i], key=get_blu, reverse=invert_sort)
+    
+    # Get dimensions
+    width, height = globals.sort_input.size
+
+    # Make new image for sorted pixels
+    if(segment_orientation == 'Horizontal'):
+        globals.sort_output = Image.new('RGB', (width, height))
+    elif(segment_orientation == 'Vertical'):
+        globals.sort_output = Image.new('RGB', (height, width))
+
+    # Write segments to array of pixels
+    pixels = []
+    for segment in segments:
+        for pixel in segment:
+            pixels.append(pixel)
+
+    globals.sort_output.putdata(pixels)
+
+    # Correct rotation
+    if(segment_orientation == 'Vertical'):
+        globals.sort_output = globals.sort_output.transpose(method=Image.Transpose.ROTATE_270)
+
+    # Set the display image to reference the sorted image
+    globals.display_image = globals.sort_output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def drift_pixels(segment_size: int, segment_random: float, segment_probability: float, orientation: str, drift_iterations: int):
     # Rotate 90 degrees for vertical sorting
     if(orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
@@ -34,31 +152,17 @@ def sort_value(segment_size: int, segment_random: float, segment_probability: fl
             row.append(pixels[x, y])
         
         # Split row into segments
-        # And sort each segment
+        # And process each segment
         x = 0
         while (x < width):
             # Apply segment size randomization
             temp_segment_size = int(segment_size + ((random.random() - 0.5) * 2 * segment_random * segment_size))
 
-            # Check if segment is to be sorted
+            # Check if segment is to be processed
             if (random.random() < segment_probability):
-                if (is_sort):
-                    if(sort_criteria == 'Hue'):
-                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_hue, reverse=invert_sort)
-                    elif(sort_criteria == 'Saturation'):
-                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_sat, reverse=invert_sort)
-                    elif(sort_criteria == 'Luminance'):
-                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_lum, reverse=invert_sort)
-                    elif(sort_criteria == 'Red'):
-                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_red, reverse=invert_sort)
-                    elif(sort_criteria == 'Green'):
-                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_grn, reverse=invert_sort)
-                    elif(sort_criteria == 'Blue'):
-                        row[x:x+temp_segment_size] = sorted(row[x:x+temp_segment_size], key=get_blu, reverse=invert_sort)
-                else:
-                    copy = row[x:x+temp_segment_size].copy()
-                    random.shuffle(copy)
-                    row[x:x+temp_segment_size] = copy
+                copy = row[x:x+temp_segment_size].copy()
+                random.shuffle(copy)
+                row[x:x+temp_segment_size] = copy
             x = x + temp_segment_size
         
         # Write sorted data to pixel array
