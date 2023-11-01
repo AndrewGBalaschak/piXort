@@ -11,11 +11,54 @@ import sort_pixels
 # Import global image variables 
 import globals
 
+# Clears the image onscreen
 def clear(event = None):
     globals.original_image = None
-    globals.sorted_image = None
+    globals.sort_input = None
+    globals.sort_output = None
     globals.display_image = None
     update_display()
+
+# Resets any sorting and brings back the original image
+def reset(event = None):
+    if globals.original_image:
+        globals.display_image = globals.original_image
+        update_display()
+
+# Pop off the undo stack and push onto redo stack
+def undo(event = None):
+    if len(globals.undo_stack) > 0:
+        globals.redo_stack.append(globals.display_image.copy())
+        globals.display_image = globals.undo_stack.pop()
+
+        update_display()
+
+    else:
+        print('Nothing to undo!')
+
+# Pop off the redo stack and push onto undo stack
+def redo(event = None):
+    if len(globals.redo_stack) > 0:
+        globals.undo_stack.append(globals.display_image.copy())
+        globals.display_image = globals.redo_stack.pop()
+
+        update_display()
+
+    else:
+        print('Nothing to redo!')
+
+# Undoes all transformations and revents to the original image
+def reset(event = None):
+    if globals.original_image:
+        globals.display_image = globals.original_image
+        globals.sort_input = globals.original_image.copy()
+        globals.display_image = globals.original_image
+        
+        # Clear any old images
+        globals.undo_stack.clear()
+        globals.redo_stack.clear()
+        globals.sort_output = None
+        update_display()
 
 # Open a file dialog to load a file
 def open_file_dialog(event = None):
@@ -24,34 +67,32 @@ def open_file_dialog(event = None):
     if file_path:
         # Load the selected image using Pillow
         globals.original_image = Image.open(file_path)
+        reset()
 
-        # Clear any old image
-        globals.sorted_image = None
-        update_display()
-
-# Opens a file dialog to save a file
+# Opens a file dialog to save the image that is currently on screen
 def save_file_dialog(event = None):
-    if globals.sorted_image:
+    if globals.display_image and globals.sort_output:
         save_path = filedialog.asksaveasfilename(defaultextension='.png', filetypes=[('PNG files', '*.png')])
         if save_path:
-            globals.sorted_image.save(save_path)
+            globals.display_image.save(save_path)
 
 # Updates the image displayed in the GUI
 def update_display():
-    if globals.sorted_image:
-        globals.display_image = globals.sorted_image.copy()
+    if not globals.display_image:
+        globals.display_image = globals.empty_image
 
-    elif globals.original_image:
-        globals.display_image = globals.original_image.copy()
+    # Copy the image to be displayed into the thumbnail buffer
+    globals.display_image_thumb = globals.display_image.copy()
 
-    else:
-        globals.display_image = globals.empty_image.copy()
+    # Create the thumbnail for display
+    globals.display_image_thumb.thumbnail(globals.thumb_size)
 
-    if globals.display_image:
-        globals.display_image.thumbnail(globals.thumb_size)
-        display_image_tk = ImageTk.PhotoImage(globals.display_image)
-        display_label.config(image=display_image_tk)
-        display_label.image = display_image_tk
+    # Create a TKinter object for display
+    display_image_tk = ImageTk.PhotoImage(globals.display_image_thumb)
+
+    # Update the display label to hold the objcet
+    display_label.config(image=display_image_tk)
+    display_label.image = display_image_tk
 
 
 #################### ---------- MAIN WINDOW ---------- ####################
@@ -73,34 +114,44 @@ root.iconwindow()
 def about_window():
     about = tk.Toplevel(root)
     about.title('About')
-    root.minsize(300, 200)
-    root.resizable(False, False)
+    about.minsize(300, 200)
+    about.resizable(False, False)
 
-    body = ttk.Label(about, text="piXort written by Andrew Balaschak\n(C) 2023")
+    body = ttk.Label(about, text='piXort written by Andrew Balaschak\n(C) 2023')
     body.pack()
 
 
 #################### ---------- MENU BAR ---------- ####################
 menubar = tk.Menu(root)
-filemenu = tk.Menu(menubar, tearoff=False)
-filemenu.add_command(label='New', command=clear, accelerator="Ctrl+N")
-filemenu.add_command(label='Open', command=open_file_dialog, accelerator="Ctrl+O")
-filemenu.add_command(label='Save', command=save_file_dialog, accelerator="Ctrl+S")
-filemenu.add_separator()
-filemenu.add_command(label='Exit', command=root.quit)
-menubar.add_cascade(label='File', menu=filemenu)
-'''
-helpmenu = tk.Menu(menubar, tearoff=False)
-helpmenu.add_command(label='Help')
-helpmenu.add_command(label='About...', command=about_window)
-menubar.add_cascade(label='Help', menu=helpmenu)
-'''
+file_menu = tk.Menu(menubar, tearoff=False)
+file_menu.add_command(label='New', command=clear, accelerator='Ctrl+N')
+file_menu.add_command(label='Open', command=open_file_dialog, accelerator='Ctrl+O')
+file_menu.add_command(label='Save', command=save_file_dialog, accelerator='Ctrl+S')
+file_menu.add_separator()
+file_menu.add_command(label='Exit', command=root.quit)
+menubar.add_cascade(label='File', menu=file_menu)
+
+edit_menu = tk.Menu(menubar, tearoff=False)
+edit_menu.add_command(label='Undo', command=undo, accelerator='Ctrl+Z')
+edit_menu.add_command(label='Redo', command=redo, accelerator='Ctrl+Y')
+edit_menu.add_separator()
+edit_menu.add_command(label='Reset', command=redo, accelerator='Ctrl+R')
+menubar.add_cascade(label='Edit', menu=edit_menu)
+
+help_menu = tk.Menu(menubar, tearoff=False)
+help_menu.add_command(label='Help')
+help_menu.add_command(label='About...', command=about_window)
+menubar.add_cascade(label='Help', menu=help_menu)
+
 root.config(menu=menubar)
 
 # Keyboard shortcuts
 root.bind('<Control-n>', clear)
 root.bind('<Control-o>', open_file_dialog)
 root.bind('<Control-s>', save_file_dialog)
+root.bind('<Control-z>', undo)
+root.bind('<Control-y>', redo)
+root.bind('<Control-r>', reset)
 
 
 #################### ---------- BASIC / ADVANCED TABS ---------- ####################
@@ -130,11 +181,11 @@ segments_frame.grid_columnconfigure(1, weight=1)
 segments_frame.grid_columnconfigure(2, weight=1)
 
 # Segments header
-segment_header = ttk.Label(segments_frame, text='Segments', font=("TkDefaultFont",24))
+segment_header = ttk.Label(segments_frame, text='Segments', font=('TkDefaultFont',24))
 segment_header.grid(row=0, column=0, columnspan=3)
 
 # Create a text box for segment size
-segment_size_label = ttk.Label(segments_frame, text='Size')
+segment_size_label = ttk.Label(segments_frame, text='Size (Pixels)')
 segment_size_entry = ttk.Entry(segments_frame)
 segment_size_entry.insert(0, '256')      # Set default value
 segment_size_label.grid(row=1, column=0, sticky='E')
@@ -143,7 +194,8 @@ segment_size_entry.grid(row=1, column=1, sticky='W')
 # Create a slider for segment random size
 def update_random_label(value):
     segment_random_scale_readout['text'] = str(round(float(value), 2))
-segment_random_label = ttk.Label(segments_frame, text='Random Size')
+    
+segment_random_label = ttk.Label(segments_frame, text='Random Size Multiplier')
 segment_random_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=0, command=update_random_label)
 segment_random_label.grid(row=2, column=0, sticky='E')
 segment_random_scale.grid(row=2, column=1, sticky='W')
@@ -183,7 +235,7 @@ sort_frame.grid_columnconfigure(1, weight=1)
 sort_frame.grid_columnconfigure(2, weight=1)
 
 # Sort header
-sort_header = ttk.Label(sort_frame, text='Sorting', font=("TkDefaultFont",24))
+sort_header = ttk.Label(sort_frame, text='Sorting', font=('TkDefaultFont',24))
 sort_header.grid(row=0, column=0, columnspan=3)
 
 # Create radio buttons for sort criteria
@@ -226,8 +278,8 @@ render_frame = ttk.Frame(root)
 render_frame.grid(row=2, column=0, sticky='NSEW')
 
 # Create buttons for rendering
-sort_button = ttk.Button(render_frame, text='Sort', width=20, command=lambda:[sort_pixels.sort_value(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get(), True, sort_direction_var.get(), sort_criteria_var.get()), update_display()])
-shuffle_button = ttk.Button(render_frame, text='Shuffle', width=20, command=lambda:[sort_pixels.sort_value(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get(), False, sort_direction_var.get(), sort_criteria_var.get()), update_display()])
+sort_button = ttk.Button(render_frame, text='Preview Sort', width=20, command=lambda:[sort_pixels.sort_value(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get(), True, sort_direction_var.get(), sort_criteria_var.get()), update_display()])
+shuffle_button = ttk.Button(render_frame, text='Preview Shuffle', width=20, command=lambda:[sort_pixels.sort_value(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get(), False, sort_direction_var.get(), sort_criteria_var.get()), update_display()])
 apply_button = ttk.Button(render_frame, text='Apply', width=44, command=sort_pixels.apply_sort)
 sort_button.grid(row=0, column=0)
 shuffle_button.grid(row=0, column=1)

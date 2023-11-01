@@ -13,18 +13,18 @@ import globals
 def sort_value(segment_size: int, segment_random: float, segment_probability: float, orientation: str, is_sort: bool, invert_sort: bool, sort_criteria: str):
     # Rotate 90 degrees for vertical sorting
     if(orientation == 'Vertical'):
-        globals.original_image = globals.original_image.transpose(method=Image.Transpose.ROTATE_90)
+        globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
 
     # If we are being trolled
     if(segment_size==0):
         return
 
     # Load pixel data
-    globals.sorted_image = globals.original_image.copy()
-    pixels = globals.sorted_image.load()
+    globals.sort_output = globals.sort_input.copy()
+    pixels = globals.sort_output.load()
 
     # Get dimensions
-    width, height = globals.sorted_image.size
+    width, height = globals.sort_output.size
 
     # Loop through rows
     for y in range(height):
@@ -66,17 +66,20 @@ def sort_value(segment_size: int, segment_random: float, segment_probability: fl
             pixels[x, y] = row[x]
 
     # Make new image for sorted pixels
-    globals.sorted_image = Image.new('RGB', (width, height))
+    globals.sort_output = Image.new('RGB', (width, height))
     sorted_pixels = []
     for y in range(height):
         for x in range(width):
             sorted_pixels.append(pixels[x,y])
-    globals.sorted_image.putdata(sorted_pixels)
+    globals.sort_output.putdata(sorted_pixels)
 
     # Correct rotation
     if(orientation == 'Vertical'):
-        globals.original_image = globals.original_image.transpose(method=Image.Transpose.ROTATE_270)
-        globals.sorted_image = globals.sorted_image.transpose(method=Image.Transpose.ROTATE_270)
+        globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
+        globals.sort_output = globals.sort_output.transpose(method=Image.Transpose.ROTATE_270)
+
+    # Set the display image to reference the sorted image
+    globals.display_image = globals.sort_output
 
 # Returns the hue of a pixel
 def get_hue(pixel):
@@ -146,6 +149,19 @@ def get_blu(pixel):
 
 # Applies the sort and allows the sorted image to be sorted again
 def apply_sort():
-    if globals.sorted_image:
-        globals.original_image = globals.sorted_image.copy()
-        globals.sorted_image = None
+    if globals.display_image:
+        # Add most recent image to the undo array
+        globals.undo_stack.append(globals.sort_input.copy())
+
+        # If we have more than the allowed undo levels, remove the oldest
+        while(len(globals.undo_stack) > globals.undo_levels):
+            del globals.undo_stack[0]
+
+        # Clear the redo stack
+        globals.redo_stack.clear()
+
+        # Copy the buffer referenced by the display to the input buffer
+        globals.sort_input = globals.display_image.copy()
+
+        # Clear the output buffer
+        globals.sort_output = None
