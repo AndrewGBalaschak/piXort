@@ -1,10 +1,5 @@
-import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog
-from ttkthemes import ThemedTk
 from PIL import Image
 import random
-import numpy as np
 
 # Import global image variables
 import globals
@@ -13,6 +8,7 @@ segments = []               # Stores the segments of an image
 segments_mask = []          # Mask of whether a segment gets processed or not
 segment_orientation = ''    # Stores orientation of segments
 
+# Computes the segments array, segment mask, and sets the segments orientation
 def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str):
     # Clear old segments
     segments.clear()
@@ -65,7 +61,7 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     if(segment_orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
 
-# Sorts pixels in segments by value/lightness
+# Sorts pixels in segments by sort criteria
 def sort_pixels(invert_sort: bool, sort_criteria: str):
     # Loop through segments
     for i in range(len(segments)):
@@ -84,7 +80,7 @@ def sort_pixels(invert_sort: bool, sort_criteria: str):
             elif(sort_criteria == 'Blue'):
                 segments[i] = sorted(segments[i], key=get_blu, reverse=invert_sort)
     
-    # Get dimensions
+    # Get dimensions for output
     width, height = globals.sort_input.size
 
     # Make new image for sorted pixels
@@ -108,78 +104,39 @@ def sort_pixels(invert_sort: bool, sort_criteria: str):
     # Set the display image to reference the sorted image
     globals.display_image = globals.sort_output
 
+def drift_pixels(drift_iterations: int, drift_probability: float):
+    # Loop through segments
+    for i in range(len(segments)):
+        # Check if segment is to be processed
+        if (segments_mask[i]):
+            # For each iteration
+            for _ in range(drift_iterations):
+                # For each pixel in the segment
+                for j in range(len(segments[i]) - 1):
+                    if(random.random() < drift_probability):
+                        temp_pixel = segments[i][j]
+                        segments[i][j] = segments[i][j+1]
+                        segments[i][j+1] = temp_pixel
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def drift_pixels(segment_size: int, segment_random: float, segment_probability: float, orientation: str, drift_iterations: int):
-    # Rotate 90 degrees for vertical sorting
-    if(orientation == 'Vertical'):
-        globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
-
-    # If we are being trolled
-    if(segment_size==0):
-        return
-
-    # Load pixel data
-    globals.sort_output = globals.sort_input.copy()
-    pixels = globals.sort_output.load()
-
-    # Get dimensions
-    width, height = globals.sort_output.size
-
-    # Loop through rows
-    for y in range(height):
-        row = []
-        # Get current row of pixels
-        for x in range(width):
-            row.append(pixels[x, y])
-        
-        # Split row into segments
-        # And process each segment
-        x = 0
-        while (x < width):
-            # Apply segment size randomization
-            temp_segment_size = int(segment_size + ((random.random() - 0.5) * 2 * segment_random * segment_size))
-
-            # Check if segment is to be processed
-            if (random.random() < segment_probability):
-                copy = row[x:x+temp_segment_size].copy()
-                random.shuffle(copy)
-                row[x:x+temp_segment_size] = copy
-            x = x + temp_segment_size
-        
-        # Write sorted data to pixel array
-        for x in range(width):
-            pixels[x, y] = row[x]
+    # Get dimensions for output
+    width, height = globals.sort_input.size
 
     # Make new image for sorted pixels
-    globals.sort_output = Image.new('RGB', (width, height))
-    sorted_pixels = []
-    for y in range(height):
-        for x in range(width):
-            sorted_pixels.append(pixels[x,y])
-    globals.sort_output.putdata(sorted_pixels)
+    if(segment_orientation == 'Horizontal'):
+        globals.sort_output = Image.new('RGB', (width, height))
+    elif(segment_orientation == 'Vertical'):
+        globals.sort_output = Image.new('RGB', (height, width))
+
+    # Write segments to array of pixels
+    pixels = []
+    for segment in segments:
+        for pixel in segment:
+            pixels.append(pixel)
+
+    globals.sort_output.putdata(pixels)
 
     # Correct rotation
-    if(orientation == 'Vertical'):
-        globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
+    if(segment_orientation == 'Vertical'):
         globals.sort_output = globals.sort_output.transpose(method=Image.Transpose.ROTATE_270)
 
     # Set the display image to reference the sorted image

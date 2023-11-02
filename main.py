@@ -95,6 +95,7 @@ def update_display():
     display_label.image = display_image_tk
 
 
+
 #################### ---------- MAIN WINDOW ---------- ####################
 # Load the default image
 globals.empty_image = Image.open('images/empty.png')
@@ -119,6 +120,7 @@ def about_window():
 
     body = ttk.Label(about, text='piXort written by Andrew Balaschak\n(C) 2023')
     body.pack()
+
 
 
 #################### ---------- MENU BAR ---------- ####################
@@ -154,6 +156,7 @@ root.bind('<Control-y>', redo)
 root.bind('<Control-r>', reset)
 
 
+
 #################### ---------- BASIC / ADVANCED TABS ---------- ####################
 # Create basic and advanced feature tabs
 tabControl = ttk.Notebook(root)
@@ -168,6 +171,7 @@ tab_basic.grid_rowconfigure(0, weight=1)
 tab_basic.grid_rowconfigure(1, weight=1)
 tab_basic.grid_columnconfigure(0, weight=1)
 tab_basic.grid_columnconfigure(1, weight=1)
+
 
 
 #################### ---------- SEGMENT OPTIONS ---------- ####################
@@ -224,6 +228,7 @@ seg_orientation_hori.grid(row=4, column=1, sticky='W')
 seg_orientation_vert.grid(row=5, column=1, sticky='W')
 
 
+
 #################### ---------- SORT OPTIONS ---------- ####################
 # Frame for sort config
 sort_frame = ttk.Frame(tab_basic)
@@ -235,7 +240,7 @@ sort_frame.grid_columnconfigure(1, weight=1)
 sort_frame.grid_columnconfigure(2, weight=1)
 
 # Sort header
-sort_header = ttk.Label(sort_frame, text='Sorting', font=('TkDefaultFont',24))
+sort_header = ttk.Label(sort_frame, text='Pixel Sorting', font=('TkDefaultFont',24))
 sort_header.grid(row=0, column=0, columnspan=3)
 
 # Create radio buttons for sort criteria
@@ -271,18 +276,111 @@ sort_direction_high = ttk.Radiobutton(sort_frame, text='Inverted', variable=sort
 sort_direction_low.grid(row=8, column=1, sticky='W')
 sort_direction_high.grid(row=9, column=1, sticky='W')
 
+
+
+#################### ---------- PIXEL DRIFT OPTIONS ---------- ####################
+# Frame for segment config
+drift_frame = ttk.Frame(tab_basic)
+drift_frame.grid(row=2, column=0)
+
+drift_frame.grid_rowconfigure(0, weight=1)
+drift_frame.grid_columnconfigure(0, weight=1)
+drift_frame.grid_columnconfigure(1, weight=1)
+drift_frame.grid_columnconfigure(2, weight=1)
+
+# Drift header
+drift_header = ttk.Label(drift_frame, text='Pixel Drift', font=('TkDefaultFont',24))
+drift_header.grid(row=0, column=0, columnspan=3)
+
+# Create a text box for drift iterations
+drift_iter_label = ttk.Label(drift_frame, text='Iterations')
+drift_iter_entry = ttk.Entry(drift_frame)
+drift_iter_entry.insert(0, '32')      # Set default value
+drift_iter_label.grid(row=1, column=0, sticky='E')
+drift_iter_entry.grid(row=1, column=1, sticky='W')
+
+# Create a slider for drift probability
+def update_drift_probability(value):
+    drift_probability_scale_readout['text'] = str(round(float(value), 2))
+    
+drift_probability_label = ttk.Label(drift_frame, text='Pixel Drift Probability')
+drift_probability_scale = ttk.Scale(drift_frame, from_=0, to=1, orient='horizontal', length=100, value=0.5, command=update_drift_probability)
+drift_probability_label.grid(row=2, column=0, sticky='E')
+drift_probability_scale.grid(row=2, column=1, sticky='W')
+drift_probability_scale_readout = ttk.Label(drift_frame, width=5, text=str(round(drift_probability_scale.get())))
+drift_probability_scale_readout.grid(row=2, column=2, sticky='W')
+
+
+
+#################### ---------- PROGRESS BAR ---------- ####################
+pb = ttk.Progressbar(root, mode='indeterminate')
+
+
+
 #################### ---------- RENDER FRAME ---------- ####################
 # Frame for render buttons
 render_frame = ttk.Frame(root)
 render_frame.grid(row=2, column=0, sticky='NSEW')
 
+# Sorts image based on parameters
+def sort():
+    # Display progress bar
+    pb.grid(row=2, column=2, sticky='EW', padx=100)
+    pb.start(25)
+
+    # Disable buttons
+    sort_button['state'] = 'disabled'
+    shuffle_button['state'] = 'disabled'
+    apply_button['state'] = 'disabled'
+
+    # Perform computation
+    sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get())
+    sort_pixels.sort_pixels(sort_direction_var.get(), sort_criteria_var.get())
+
+    # Enable buttons
+    sort_button['state'] = 'normal'
+    shuffle_button['state'] = 'normal'
+    apply_button['state'] = 'normal'
+
+    # Hide progress bar
+    pb.stop()
+    pb.grid_forget()
+
+    update_display()
+
+def drift():
+    # Display progress bar
+    pb.grid(row=2, column=2, sticky='EW', padx=100)
+    pb.start(25)
+
+    # Disable buttons
+    sort_button['state'] = 'disabled'
+    shuffle_button['state'] = 'disabled'
+    apply_button['state'] = 'disabled'
+
+    # Perform computation
+    sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get())
+    sort_pixels.drift_pixels(int(drift_iter_entry.get()), drift_probability_scale.get())
+
+    # Enable buttons
+    sort_button['state'] = 'normal'
+    shuffle_button['state'] = 'normal'
+    apply_button['state'] = 'normal'
+
+    # Hide progress bar
+    pb.stop()
+    pb.grid_forget()
+
+    update_display()
+
 # Create buttons for rendering
-sort_button = ttk.Button(render_frame, text='Preview Sort', width=20, command=lambda:[sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get()), sort_pixels.sort_pixels(sort_direction_var.get(), sort_criteria_var.get()), update_display()])
-shuffle_button = ttk.Button(render_frame, text='Preview Shuffle', width=20, command=lambda:[sort_pixels.sort_pixels(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get(), sort_direction_var.get(), sort_criteria_var.get()), update_display()])
+sort_button = ttk.Button(render_frame, text='Preview Sort', width=20, command=lambda:[threading.Thread(target=sort).start()])
+shuffle_button = ttk.Button(render_frame, text='Preview Drift', width=20, command=lambda:[threading.Thread(target=drift).start()])
 apply_button = ttk.Button(render_frame, text='Apply', width=44, command=sort_pixels.apply_sort)
 sort_button.grid(row=0, column=0)
 shuffle_button.grid(row=0, column=1)
 apply_button.grid(row=1, column=0, columnspan=2)
+
 
 
 #################### ---------- IMAGE ---------- ####################
@@ -290,9 +388,7 @@ display_label = ttk.Label(root)
 display_label.grid(row=0, column=2, rowspan=1, sticky='NSEW')
 
 
-#################### ---------- PROGRESS ---------- ####################
-# progress_bar = ttk.Progressbar(root, mode='determinate')
-# progress_bar.grid(row=1, column=2, sticky='EW')
+
 
 update_display()
 root.mainloop()
