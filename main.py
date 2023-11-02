@@ -118,8 +118,8 @@ def about_window():
     about.minsize(300, 200)
     about.resizable(False, False)
 
-    body = ttk.Label(about, text='piXort written by Andrew Balaschak\n(C) 2023')
-    body.pack()
+    body = ttk.Label(about, text='piXort is a Free and Open-Source Software (FOSS) pixel sorting program written in Python. For more details see the LICENSE file.\n\n(c) Andrew Balaschak 2023', anchor=tk.CENTER, justify=tk.CENTER, wraplength=180)
+    body.pack(fill=tk.BOTH, expand=True)
 
 
 
@@ -189,7 +189,7 @@ segment_header = ttk.Label(segments_frame, text='Segments', font=('TkDefaultFont
 segment_header.grid(row=0, column=0, columnspan=3)
 
 # Create a text box for segment size
-segment_size_label = ttk.Label(segments_frame, text='Size (Pixels)')
+segment_size_label = ttk.Label(segments_frame, text='Length (Pixels)')
 segment_size_entry = ttk.Entry(segments_frame)
 segment_size_entry.insert(0, '256')      # Set default value
 segment_size_label.grid(row=1, column=0, sticky='E')
@@ -197,18 +197,19 @@ segment_size_entry.grid(row=1, column=1, sticky='W')
 
 # Create a slider for segment random size
 def update_random_label(value):
-    segment_random_scale_readout['text'] = str(round(float(value), 2))
+    segment_random_scale_readout['text'] = str(round(float(value)*100)) + '%'
     
-segment_random_label = ttk.Label(segments_frame, text='Random Size Multiplier')
+segment_random_label = ttk.Label(segments_frame, text='Random Length Multiplier')
 segment_random_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=0, command=update_random_label)
 segment_random_label.grid(row=2, column=0, sticky='E')
 segment_random_scale.grid(row=2, column=1, sticky='W')
 segment_random_scale_readout = ttk.Label(segments_frame, width=5, text=str(round(segment_random_scale.get())))
 segment_random_scale_readout.grid(row=2, column=2, sticky='W')
+update_random_label('0')
 
 # Create a slider for segment sort probability
 def update_probability_label(value):
-    segment_probability_readout['text'] = str(round(float(value), 2))
+    segment_probability_readout['text'] = str(round(float(value)*100)) + '%'
 
 segment_probability_label = ttk.Label(segments_frame, text='Effect Probability')
 segment_probability_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=1, command=update_probability_label)
@@ -216,6 +217,7 @@ segment_probability_label.grid(row=3, column=0, sticky='E')
 segment_probability_scale.grid(row=3, column=1, sticky='W')
 segment_probability_readout = ttk.Label(segments_frame, width=5, text=str(round(float(segment_probability_scale.get()), 2)))
 segment_probability_readout.grid(row=3, column=2, sticky='W')
+update_probability_label('1')
 
 # Create radio buttons for segment orientation
 seg_orientation_label = ttk.Label(segments_frame, text='Orientation:')
@@ -289,13 +291,13 @@ drift_frame.grid_columnconfigure(1, weight=1)
 drift_frame.grid_columnconfigure(2, weight=1)
 
 # Drift header
-drift_header = ttk.Label(drift_frame, text='Pixel Drift', font=('TkDefaultFont',24))
+drift_header = ttk.Label(drift_frame, text='Pixel Smear', font=('TkDefaultFont',24))
 drift_header.grid(row=0, column=0, columnspan=3)
 
 # Create a text box for drift iterations
 drift_iter_label = ttk.Label(drift_frame, text='Iterations')
 drift_iter_entry = ttk.Entry(drift_frame)
-drift_iter_entry.insert(0, '32')      # Set default value
+drift_iter_entry.insert(0, '16')      # Set default value
 drift_iter_label.grid(row=1, column=0, sticky='E')
 drift_iter_entry.grid(row=1, column=1, sticky='W')
 
