@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageFilter
 import random
 
 # Import global image variables
@@ -8,8 +8,37 @@ segments = []               # Stores the segments of an image
 segments_mask = []          # Mask of whether a segment gets processed or not
 segment_orientation = ''    # Stores orientation of segments
 
+def get_edges(edge_threshold: float):
+    # Load pixel data
+    edges = globals.sort_input.copy()
+    edges = edges.convert('L')
+
+    # Apply edge detection
+    edges = edges.filter(ImageFilter.FIND_EDGES)
+    pixels = edges.load()
+
+    # Get dimensions
+    width, height = edges.size
+
+    # Loop through rows
+    for y in range(height):
+        # Get current row of pixels
+        for x in range(width):
+            temp = pixels[x, y]
+            if temp > (255 * edge_threshold):
+                pixels[x, y] = 255
+            else:
+                pixels[x, y] = 0
+
+    # edges.show()
+    globals.edges = edges.copy()
+
 # Computes the segments array, segment mask, and sets the segments orientation
-def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str):
+def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str, detect_edges: bool, edge_threshold: float):
+    # If we are being trolled
+    if(segment_size==0):
+        return
+    
     # Clear old segments
     segments.clear()
     segments_mask.clear()
@@ -20,13 +49,11 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     # Rotate 90 degrees for vertical segments
     if(orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
+        global edges
+        edges = edges.transpose(method=Image.Transpose.ROTATE_90)
         segment_orientation = 'Vertical'
     else:
         segment_orientation = 'Horizontal'
-
-    # If we are being trolled
-    if(segment_size==0):
-        return
 
     # Load pixel data
     globals.sort_output = globals.sort_input.copy()
@@ -35,31 +62,76 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     # Get dimensions
     width, height = globals.sort_output.size
 
-    # Loop through rows
-    for y in range(height):
-        row = []
-        # Get current row of pixels
-        for x in range(width):
-            row.append(pixels[x, y])
-        
-        # Split row into segments
-        x = 0
-        while (x < width):
-            # Apply segment size randomization
-            temp_segment_size = int(segment_size + ((random.random() - 0.5) * 2 * segment_random * segment_size))
+    # If we are using random segments
+    if not detect_edges:
+        for y in range(height):
+            row = []
+            # Get current row of pixels
+            for x in range(width):
+                row.append(pixels[x, y])
+            
+            # Split row into segments
+            x = 0
 
-            # Add the segment to the segments array
-            segments.append(row[x:x+temp_segment_size].copy())
+            while (x < width):
+                # Apply segment size randomization
+                temp_segment_size = int(segment_size + ((random.random() - 0.5) * 2 * segment_random * segment_size))
+
+                # Add the segment to the segments array
+                segments.append(row[x:x+temp_segment_size].copy())
+
+                # Check if segment is to be processed, add to segments mask array
+                segments_mask.append(random.random() <= segment_probability)
+                
+                # Move to next segment
+                x = x + temp_segment_size
+
+    # If we are using edge detection
+    else:
+        # Load edge data
+        if not globals.edges:
+            get_edges(edge_threshold)
+
+        edges = globals.edges.load()
+
+        for y in range(height):
+            row = []
+            # Get current row of pixels
+            for x in range(width):
+                row.append(pixels[x, y])
+            
+            # Split row into segments
+            x = 0
+            last_x = 0
+            last_edge = edges[0, y]
+
+            while (x < width):
+                # If we are at an edge or at the end
+                if edges[x, y] != last_edge:
+                    # Add the edge to segments
+                    segments.append(row[last_x:x])
+
+                    # Check if segment is to be processed, add to segments mask array
+                    segments_mask.append(random.random() <= segment_probability)
+                    
+                    last_edge = edges[x, y]
+                    last_x = x
+                    x = x + 1
+                # If we are not at an edge
+                else:
+                    x = x + 1
+            
+            # Add any remainder
+            segments.append(row[last_x:x])
 
             # Check if segment is to be processed, add to segments mask array
-            segments_mask.append(random.random() < segment_probability)
-            
-            # Move to next segment
-            x = x + temp_segment_size
+            segments_mask.append(random.random() <= segment_probability)
+
 
     # Correct rotation
     if(segment_orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
+        # edges = edges.transpose(method=Image.Transpose.ROTATE_270)
 
 # Sorts pixels in segments by sort criteria
 def sort_pixels(invert_sort: bool, sort_criteria: str):

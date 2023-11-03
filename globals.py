@@ -3,6 +3,7 @@ undo_stack = []             # Stores multiple levels of undo
 redo_stack = []             # Stores multiple levels of redo
 sort_input = None           # Stores the input to the storting algorithm
 sort_output = None          # Stores the output from the sorting algorithm
+edges = None                # Stores detected edges for display
 display_image_thumb = None  # Stores the image displayed on screen in thumbnail size
 empty_image = None          # Stores the empty image used when no image is loaded
 

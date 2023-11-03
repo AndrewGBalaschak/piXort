@@ -176,24 +176,64 @@ tab_basic.grid_columnconfigure(1, weight=1)
 
 #################### ---------- SEGMENT OPTIONS ---------- ####################
 # Frame for segment config
-segments_frame = ttk.Frame(tab_basic)
-segments_frame.grid(row=0, column=0)
+segments_frame = ttk.Frame(tab_basic, relief=tk.SUNKEN, padding=(5,5,5,5))
+segments_frame.grid(row=0, column=0, sticky='EW')
 
 segments_frame.grid_rowconfigure(0, weight=1)
 segments_frame.grid_columnconfigure(0, weight=1)
 segments_frame.grid_columnconfigure(1, weight=1)
 segments_frame.grid_columnconfigure(2, weight=1)
 
+def update_segments_visibility():
+    # If edge detection is on
+    if(segment_edge_detect_var.get()):
+        segment_size_label['state'] = 'disabled'
+        segment_size_entry['state'] = 'disabled'
+        segment_random_scale['state'] = 'disabled'
+        segment_random_label['state'] = 'disabled'
+        segment_random_scale_readout['state'] = 'disabled'
+        update_display_edges()
+    else:
+        segment_size_label['state'] = 'enabled'
+        segment_size_entry['state'] = 'enabled'
+        segment_random_scale['state'] = 'enabled'
+        segment_random_label['state'] = 'enabled'
+        segment_random_scale_readout['state'] = 'enabled'
+        update_display()
+
 # Segments header
 segment_header = ttk.Label(segments_frame, text='Segments', font=('TkDefaultFont',24))
 segment_header.grid(row=0, column=0, columnspan=3)
 
+# Create checkbutton for edge detection
+segment_edge_detect_var = tk.BooleanVar(value=False)
+segment_edge_detect_label = ttk.Label(segments_frame, text='Edge Detection')
+segment_edge_detect_check = ttk.Checkbutton(segments_frame, variable=segment_edge_detect_var, command=update_segments_visibility)
+segment_edge_detect_label.grid(row=1, column=0, sticky='E')
+segment_edge_detect_check.grid(row=1, column=1, sticky='W')
+
+# Create a slider for edge detection threshold
+def update_edge_detect_label(value):
+    segment_edge_thresh_readout['text'] = str(round(float(value)*100)) + '%'
+
+segment_edge_thresh_label = ttk.Label(segments_frame, text='Edge Threshold')
+segment_edge_thresh_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=1, command=lambda x:[update_edge_detect_label(x), threading.Thread(target=update_display_edges).start()])
+segment_edge_thresh_label.grid(row=2, column=0, sticky='E')
+segment_edge_thresh_scale.grid(row=2, column=1, sticky='W')
+segment_edge_thresh_readout = ttk.Label(segments_frame, width=5, text=str(round(float(segment_edge_thresh_scale.get()), 2)))
+segment_edge_thresh_readout.grid(row=2, column=2, sticky='W')
+update_edge_detect_label('1')
+
+# Create separator
+sort_separator =  ttk.Separator(segments_frame, orient='horizontal')
+sort_separator.grid(row=3, column=0, columnspan=3, sticky='EW')
+
 # Create a text box for segment size
 segment_size_label = ttk.Label(segments_frame, text='Length (Pixels)')
-segment_size_entry = ttk.Entry(segments_frame)
+segment_size_entry = ttk.Entry(segments_frame, width=10)
 segment_size_entry.insert(0, '256')      # Set default value
-segment_size_label.grid(row=1, column=0, sticky='E')
-segment_size_entry.grid(row=1, column=1, sticky='W')
+segment_size_label.grid(row=4, column=0, sticky='E')
+segment_size_entry.grid(row=4, column=1, sticky='W')
 
 # Create a slider for segment random size
 def update_random_label(value):
@@ -201,11 +241,15 @@ def update_random_label(value):
     
 segment_random_label = ttk.Label(segments_frame, text='Random Length Multiplier')
 segment_random_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=0, command=update_random_label)
-segment_random_label.grid(row=2, column=0, sticky='E')
-segment_random_scale.grid(row=2, column=1, sticky='W')
+segment_random_label.grid(row=5, column=0, sticky='E')
+segment_random_scale.grid(row=5, column=1, sticky='W')
 segment_random_scale_readout = ttk.Label(segments_frame, width=5, text=str(round(segment_random_scale.get())))
-segment_random_scale_readout.grid(row=2, column=2, sticky='W')
+segment_random_scale_readout.grid(row=5, column=2, sticky='W')
 update_random_label('0')
+
+# Create separator
+sort_separator =  ttk.Separator(segments_frame, orient='horizontal')
+sort_separator.grid(row=6, column=0, columnspan=3, sticky='EW')
 
 # Create a slider for segment sort probability
 def update_probability_label(value):
@@ -213,28 +257,32 @@ def update_probability_label(value):
 
 segment_probability_label = ttk.Label(segments_frame, text='Effect Probability')
 segment_probability_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=1, command=update_probability_label)
-segment_probability_label.grid(row=3, column=0, sticky='E')
-segment_probability_scale.grid(row=3, column=1, sticky='W')
+segment_probability_label.grid(row=7, column=0, sticky='E')
+segment_probability_scale.grid(row=7, column=1, sticky='W')
 segment_probability_readout = ttk.Label(segments_frame, width=5, text=str(round(float(segment_probability_scale.get()), 2)))
-segment_probability_readout.grid(row=3, column=2, sticky='W')
+segment_probability_readout.grid(row=7, column=2, sticky='W')
 update_probability_label('1')
 
-# Create radio buttons for segment orientation
-seg_orientation_label = ttk.Label(segments_frame, text='Orientation:')
-seg_orientation_label.grid(row=4, column=0, rowspan=2, sticky='E')
+# Create separator
+sort_separator =  ttk.Separator(segments_frame, orient='horizontal')
+sort_separator.grid(row=8, column=0, columnspan=3, sticky='EW')
 
-seg_orientation_var = tk.StringVar(value='Horizontal')
-seg_orientation_hori = ttk.Radiobutton(segments_frame, text='Horizontal', variable=seg_orientation_var, value='Horizontal')
-seg_orientation_vert = ttk.Radiobutton(segments_frame, text='Vertical', variable=seg_orientation_var, value='Vertical')
-seg_orientation_hori.grid(row=4, column=1, sticky='W')
-seg_orientation_vert.grid(row=5, column=1, sticky='W')
+# Create radio buttons for segment orientation
+segment_orientation_label = ttk.Label(segments_frame, text='Orientation:')
+segment_orientation_label.grid(row=9, column=0, rowspan=2, sticky='E')
+
+segment_orientation_var = tk.StringVar(value='Horizontal')
+segment_orientation_hori = ttk.Radiobutton(segments_frame, text='Horizontal', variable=segment_orientation_var, value='Horizontal')
+segment_orientation_vert = ttk.Radiobutton(segments_frame, text='Vertical', variable=segment_orientation_var, value='Vertical')
+segment_orientation_hori.grid(row=9, column=1, sticky='W')
+segment_orientation_vert.grid(row=10, column=1, sticky='W')
 
 
 
 #################### ---------- SORT OPTIONS ---------- ####################
 # Frame for sort config
-sort_frame = ttk.Frame(tab_basic)
-sort_frame.grid(row=1, column=0)
+sort_frame = ttk.Frame(tab_basic, relief=tk.SUNKEN, padding=(5,5,5,5))
+sort_frame.grid(row=1, column=0, sticky='EW')
 
 sort_frame.grid_rowconfigure(0, weight=1)
 sort_frame.grid_columnconfigure(0, weight=1)
@@ -266,7 +314,7 @@ sort_criteria_blu.grid(row=6, column=1, sticky='W')
 
 # Create separator
 sort_separator =  ttk.Separator(sort_frame, orient='horizontal')
-sort_separator.grid(row=7, column=0, columnspan=2, sticky='EW')
+sort_separator.grid(row=7, column=0, columnspan=4, sticky='EW')
 
 # Create radio buttons for sort direction
 sort_direction_label = ttk.Label(sort_frame, text='Sort Direction:')
@@ -282,8 +330,8 @@ sort_direction_high.grid(row=9, column=1, sticky='W')
 
 #################### ---------- PIXEL DRIFT OPTIONS ---------- ####################
 # Frame for segment config
-drift_frame = ttk.Frame(tab_basic)
-drift_frame.grid(row=2, column=0)
+drift_frame = ttk.Frame(tab_basic, relief=tk.SUNKEN, padding=(5,5,5,5))
+drift_frame.grid(row=2, column=0, sticky='EW')
 
 drift_frame.grid_rowconfigure(0, weight=1)
 drift_frame.grid_columnconfigure(0, weight=1)
@@ -291,7 +339,7 @@ drift_frame.grid_columnconfigure(1, weight=1)
 drift_frame.grid_columnconfigure(2, weight=1)
 
 # Drift header
-drift_header = ttk.Label(drift_frame, text='Pixel Smear', font=('TkDefaultFont',24))
+drift_header = ttk.Label(drift_frame, text='Pixel Drift', font=('TkDefaultFont',24))
 drift_header.grid(row=0, column=0, columnspan=3)
 
 # Create a text box for drift iterations
@@ -303,7 +351,7 @@ drift_iter_entry.grid(row=1, column=1, sticky='W')
 
 # Create a slider for drift probability
 def update_drift_probability(value):
-    drift_probability_scale_readout['text'] = str(round(float(value), 2))
+    drift_probability_scale_readout['text'] = str(round(float(value) * 100)) + '%'
     
 drift_probability_label = ttk.Label(drift_frame, text='Pixel Drift Probability')
 drift_probability_scale = ttk.Scale(drift_frame, from_=0, to=1, orient='horizontal', length=100, value=0.5, command=update_drift_probability)
@@ -311,6 +359,7 @@ drift_probability_label.grid(row=2, column=0, sticky='E')
 drift_probability_scale.grid(row=2, column=1, sticky='W')
 drift_probability_scale_readout = ttk.Label(drift_frame, width=5, text=str(round(drift_probability_scale.get())))
 drift_probability_scale_readout.grid(row=2, column=2, sticky='W')
+update_drift_probability('0.5')
 
 
 
@@ -324,56 +373,84 @@ pb = ttk.Progressbar(root, mode='indeterminate')
 render_frame = ttk.Frame(root)
 render_frame.grid(row=2, column=0, sticky='NSEW')
 
+# Displays edges
+def update_display_edges():
+    if segment_edge_detect_var.get() and globals.sort_input:
+        # Display progress bar
+        pb.grid(row=2, column=2, sticky='EW', padx=100)
+        pb.start(25)
+
+        sort_pixels.get_edges(segment_edge_thresh_scale.get())
+
+        # Hide progress bar
+        pb.stop()
+        pb.grid_forget()
+
+        # Copy the edges into the thumbnail buffer
+        globals.display_image_thumb = globals.edges.copy()
+
+        # Create the thumbnail for display
+        globals.display_image_thumb.thumbnail(globals.thumb_size)
+
+        # Create a TKinter object for display
+        display_image_tk = ImageTk.PhotoImage(globals.display_image_thumb)
+
+        # Update the display label to hold the objcet
+        display_label.config(image=display_image_tk)
+        display_label.image = display_image_tk
+
 # Sorts image based on parameters
 def sort():
-    # Display progress bar
-    pb.grid(row=2, column=2, sticky='EW', padx=100)
-    pb.start(25)
+    if globals.sort_input:
+        # Display progress bar
+        pb.grid(row=2, column=2, sticky='EW', padx=100)
+        pb.start(25)
 
-    # Disable buttons
-    sort_button['state'] = 'disabled'
-    shuffle_button['state'] = 'disabled'
-    apply_button['state'] = 'disabled'
+        # Disable buttons
+        sort_button['state'] = 'disabled'
+        shuffle_button['state'] = 'disabled'
+        apply_button['state'] = 'disabled'
 
-    # Perform computation
-    sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get())
-    sort_pixels.sort_pixels(sort_direction_var.get(), sort_criteria_var.get())
+        # Perform computation
+        sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get(), segment_edge_thresh_scale.get())
+        sort_pixels.sort_pixels(sort_direction_var.get(), sort_criteria_var.get())
 
-    # Enable buttons
-    sort_button['state'] = 'normal'
-    shuffle_button['state'] = 'normal'
-    apply_button['state'] = 'normal'
+        # Enable buttons
+        sort_button['state'] = 'normal'
+        shuffle_button['state'] = 'normal'
+        apply_button['state'] = 'normal'
 
-    # Hide progress bar
-    pb.stop()
-    pb.grid_forget()
+        # Hide progress bar
+        pb.stop()
+        pb.grid_forget()
 
-    update_display()
+        update_display()
 
 def drift():
-    # Display progress bar
-    pb.grid(row=2, column=2, sticky='EW', padx=100)
-    pb.start(25)
+    if globals.sort_input:
+        # Display progress bar
+        pb.grid(row=2, column=2, sticky='EW', padx=100)
+        pb.start(25)
 
-    # Disable buttons
-    sort_button['state'] = 'disabled'
-    shuffle_button['state'] = 'disabled'
-    apply_button['state'] = 'disabled'
+        # Disable buttons
+        sort_button['state'] = 'disabled'
+        shuffle_button['state'] = 'disabled'
+        apply_button['state'] = 'disabled'
 
-    # Perform computation
-    sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), seg_orientation_var.get())
-    sort_pixels.drift_pixels(int(drift_iter_entry.get()), drift_probability_scale.get())
+        # Perform computation
+        sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get(), segment_edge_thresh_scale.get())
+        sort_pixels.drift_pixels(int(drift_iter_entry.get()), drift_probability_scale.get())
 
-    # Enable buttons
-    sort_button['state'] = 'normal'
-    shuffle_button['state'] = 'normal'
-    apply_button['state'] = 'normal'
+        # Enable buttons
+        sort_button['state'] = 'normal'
+        shuffle_button['state'] = 'normal'
+        apply_button['state'] = 'normal'
 
-    # Hide progress bar
-    pb.stop()
-    pb.grid_forget()
+        # Hide progress bar
+        pb.stop()
+        pb.grid_forget()
 
-    update_display()
+        update_display()
 
 # Create buttons for rendering
 sort_button = ttk.Button(render_frame, text='Preview Sort', width=20, command=lambda:[threading.Thread(target=sort).start()])
