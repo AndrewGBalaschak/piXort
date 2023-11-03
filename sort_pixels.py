@@ -15,23 +15,25 @@ def get_edges(edge_threshold: float):
 
     # Apply edge detection
     edges = edges.filter(ImageFilter.FIND_EDGES)
-    pixels = edges.load()
+    edges = edges.load()
+    pixels = []
 
     # Get dimensions
-    width, height = edges.size
+    width, height = globals.sort_input.size
 
     # Loop through rows
     for y in range(height):
         # Get current row of pixels
         for x in range(width):
-            temp = pixels[x, y]
+            temp = edges[x, y]
             if temp > (255 * edge_threshold):
-                pixels[x, y] = 255
+                pixels.append((255, 255, 255))
             else:
-                pixels[x, y] = 0
+                pixels.append(0)
 
     # edges.show()
-    globals.edges = edges.copy()
+    globals.edges = Image.new('RGB', (width, height))
+    globals.edges.putdata(pixels)
 
 # Computes the segments array, segment mask, and sets the segments orientation
 def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str, detect_edges: bool, edge_threshold: float):
@@ -49,8 +51,7 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     # Rotate 90 degrees for vertical segments
     if(orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
-        global edges
-        edges = edges.transpose(method=Image.Transpose.ROTATE_90)
+        globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_90)
         segment_orientation = 'Vertical'
     else:
         segment_orientation = 'Horizontal'
@@ -131,7 +132,7 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     # Correct rotation
     if(segment_orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
-        # edges = edges.transpose(method=Image.Transpose.ROTATE_270)
+        globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_270)
 
 # Sorts pixels in segments by sort criteria
 def sort_pixels(invert_sort: bool, sort_criteria: str):

@@ -217,12 +217,12 @@ def update_edge_detect_label(value):
     segment_edge_thresh_readout['text'] = str(round(float(value)*100)) + '%'
 
 segment_edge_thresh_label = ttk.Label(segments_frame, text='Edge Threshold')
-segment_edge_thresh_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=1, command=lambda x:[update_edge_detect_label(x), threading.Thread(target=update_display_edges).start()])
+segment_edge_thresh_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=0.5, command=lambda x:[update_edge_detect_label(x), threading.Thread(target=update_display_edges).start()])
 segment_edge_thresh_label.grid(row=2, column=0, sticky='E')
 segment_edge_thresh_scale.grid(row=2, column=1, sticky='W')
 segment_edge_thresh_readout = ttk.Label(segments_frame, width=5, text=str(round(float(segment_edge_thresh_scale.get()), 2)))
 segment_edge_thresh_readout.grid(row=2, column=2, sticky='W')
-update_edge_detect_label('1')
+update_edge_detect_label(segment_edge_thresh_scale.get())
 
 # Create separator
 sort_separator =  ttk.Separator(segments_frame, orient='horizontal')
@@ -245,7 +245,7 @@ segment_random_label.grid(row=5, column=0, sticky='E')
 segment_random_scale.grid(row=5, column=1, sticky='W')
 segment_random_scale_readout = ttk.Label(segments_frame, width=5, text=str(round(segment_random_scale.get())))
 segment_random_scale_readout.grid(row=5, column=2, sticky='W')
-update_random_label('0')
+update_random_label(segment_random_scale.get())
 
 # Create separator
 sort_separator =  ttk.Separator(segments_frame, orient='horizontal')
@@ -261,7 +261,7 @@ segment_probability_label.grid(row=7, column=0, sticky='E')
 segment_probability_scale.grid(row=7, column=1, sticky='W')
 segment_probability_readout = ttk.Label(segments_frame, width=5, text=str(round(float(segment_probability_scale.get()), 2)))
 segment_probability_readout.grid(row=7, column=2, sticky='W')
-update_probability_label('1')
+update_probability_label(segment_probability_scale.get())
 
 # Create separator
 sort_separator =  ttk.Separator(segments_frame, orient='horizontal')
