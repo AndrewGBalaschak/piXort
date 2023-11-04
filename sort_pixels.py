@@ -1,5 +1,6 @@
 from PIL import Image, ImageFilter
 import random
+import multiprocessing
 
 # Import global image variables
 import globals
@@ -8,6 +9,7 @@ segments = []               # Stores the segments of an image
 segments_mask = []          # Mask of whether a segment gets processed or not
 segment_orientation = ''    # Stores orientation of segments
 
+# Computes the segments array using the detected edges of the image
 def get_edges(edge_threshold: float):
     # Load pixel data
     edges = globals.sort_input.copy()
@@ -38,7 +40,7 @@ def get_edges(edge_threshold: float):
 # Computes the segments array, segment mask, and sets the segments orientation
 def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str, detect_edges: bool):
     # If we are being trolled
-    if(segment_size==0):
+    if (segment_size==0):
         return
     
     # Clear old segments
@@ -49,19 +51,19 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     global segment_orientation
 
     # Rotate 90 degrees for vertical segments
-    if(orientation == 'Vertical'):
+    if (orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
-        globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_90)
+        if detect_edges:
+            globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_90)
         segment_orientation = 'Vertical'
     else:
         segment_orientation = 'Horizontal'
 
     # Load pixel data
-    globals.sort_output = globals.sort_input.copy()
-    pixels = globals.sort_output.load()
+    pixels = globals.sort_input.load()
 
     # Get dimensions
-    width, height = globals.sort_output.size
+    width, height = globals.sort_input.size
 
     # If we are using random segments
     if not detect_edges:
@@ -86,12 +88,6 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
                 
                 # Move to next segment
                 x = x + temp_segment_size
-
-            # Add any remainder
-            segments.append(row[x:])
-
-            # Check if segment is to be processed, add to segments mask array
-            segments_mask.append(random.random() <= segment_probability)
 
     # If we are using edge detection
     else:
@@ -133,86 +129,100 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
 
 
     # Correct rotation
-    if(segment_orientation == 'Vertical'):
+    if (segment_orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
-        globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_270)
+        if detect_edges:
+            globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_270)
+
+# Sort helper for multiprocessing
+def sort_helper(segment, sort_criteria, invert_sort, segment_probability, i):
+    # if (segments_mask[i]):
+    if (random.random() <= segment_probability):
+        if (sort_criteria == 'Hue'):
+            return sorted(segment, key=get_hue, reverse=invert_sort)
+        elif (sort_criteria == 'Saturation'):
+            return sorted(segment, key=get_sat, reverse=invert_sort)
+        elif (sort_criteria == 'Luminance'):
+            return sorted(segment, key=get_lum, reverse=invert_sort)
+        elif (sort_criteria == 'Red'):
+            return sorted(segment, key=get_red, reverse=invert_sort)
+        elif (sort_criteria == 'Green'):
+            return sorted(segment, key=get_grn, reverse=invert_sort)
+        elif (sort_criteria == 'Blue'):
+            return sorted(segment, key=get_blu, reverse=invert_sort)
+    else:
+        return segment
 
 # Sorts pixels in segments by sort criteria
-def sort_pixels(invert_sort: bool, sort_criteria: str):
-    # Loop through segments
-    for i in range(len(segments)):
-        # Check if segment is to be processed
-        if (segments_mask[i]):
-            if(sort_criteria == 'Hue'):
-                segments[i] = sorted(segments[i], key=get_hue, reverse=invert_sort)
-            elif(sort_criteria == 'Saturation'):
-                segments[i] = sorted(segments[i], key=get_sat, reverse=invert_sort)
-            elif(sort_criteria == 'Luminance'):
-                segments[i] = sorted(segments[i], key=get_lum, reverse=invert_sort)
-            elif(sort_criteria == 'Red'):
-                segments[i] = sorted(segments[i], key=get_red, reverse=invert_sort)
-            elif(sort_criteria == 'Green'):
-                segments[i] = sorted(segments[i], key=get_grn, reverse=invert_sort)
-            elif(sort_criteria == 'Blue'):
-                segments[i] = sorted(segments[i], key=get_blu, reverse=invert_sort)
-    
+def sort_pixels(invert_sort: bool, sort_criteria: str, segment_probability: float):
+    pool = multiprocessing.Pool()
+    sorted_segments = pool.starmap(sort_helper, [(sublist, sort_criteria, invert_sort, segment_probability, i) for i, sublist in enumerate(segments)])
+    pool.close()
+
     # Get dimensions for output
     width, height = globals.sort_input.size
-
+    
     # Make new image for sorted pixels
-    if(segment_orientation == 'Horizontal'):
+    if (segment_orientation == 'Horizontal'):
         globals.sort_output = Image.new('RGB', (width, height))
-    elif(segment_orientation == 'Vertical'):
+    elif (segment_orientation == 'Vertical'):
         globals.sort_output = Image.new('RGB', (height, width))
 
     # Write segments to array of pixels
     pixels = []
-    for segment in segments:
+    for segment in sorted_segments:
         for pixel in segment:
             pixels.append(pixel)
-
+    
     globals.sort_output.putdata(pixels)
 
     # Correct rotation
-    if(segment_orientation == 'Vertical'):
+    if (segment_orientation == 'Vertical'):
         globals.sort_output = globals.sort_output.transpose(method=Image.Transpose.ROTATE_270)
 
     # Set the display image to reference the sorted image
     globals.display_image = globals.sort_output
 
-def drift_pixels(drift_iterations: int, drift_probability: float):
-    # Loop through segments
-    for i in range(len(segments)):
-        # Check if segment is to be processed
-        if (segments_mask[i]):
-            # For each iteration
+# Drift helper for multiprocessing
+def drift_helper(segment, drift_iterations, drift_probability, segment_probability, i):
+    if (random.random() <= segment_probability):
+        # For each iteration
             for _ in range(drift_iterations):
                 # For each pixel in the segment
-                for j in range(len(segments[i]) - 1):
-                    if(random.random() < drift_probability):
-                        temp_pixel = segments[i][j]
-                        segments[i][j] = segments[i][j+1]
-                        segments[i][j+1] = temp_pixel
+                for j in range(len(segment) - 1):
+                    if (random.random() < drift_probability):
+                        temp_pixel = segment[j]
+                        segment[j] = segment[j+1]
+                        segment[j+1] = temp_pixel
+            return segment
+    else:
+        return segment
+
+# Shuffles pixels with their neighbors
+def drift_pixels(drift_iterations: int, drift_probability: float, segment_probability: float):
+    pool = multiprocessing.Pool()
+    drifted_segments = pool.starmap(drift_helper, [(sublist, drift_iterations, drift_probability, segment_probability, i) for i, sublist in enumerate(segments)])
+    pool.close()
 
     # Get dimensions for output
     width, height = globals.sort_input.size
 
     # Make new image for sorted pixels
-    if(segment_orientation == 'Horizontal'):
+    if (segment_orientation == 'Horizontal'):
         globals.sort_output = Image.new('RGB', (width, height))
-    elif(segment_orientation == 'Vertical'):
+    elif (segment_orientation == 'Vertical'):
         globals.sort_output = Image.new('RGB', (height, width))
 
     # Write segments to array of pixels
     pixels = []
-    for segment in segments:
+    for segment in drifted_segments:
         for pixel in segment:
             pixels.append(pixel)
 
     globals.sort_output.putdata(pixels)
 
     # Correct rotation
-    if(segment_orientation == 'Vertical'):
+    if (segment_orientation == 'Vertical'):
         globals.sort_output = globals.sort_output.transpose(method=Image.Transpose.ROTATE_270)
 
     # Set the display image to reference the sorted image
@@ -228,16 +238,16 @@ def get_hue(pixel):
     min_val = min(R, G, B)
     hue = 0
 
-    if(R > G and R > B):
+    if (R > G and R > B):
         hue = (G - B) / (max_val - min_val)
-    if(G > R and G > B):
+    if (G > R and G > B):
         hue = 2 + (B - R) / (max_val - min_val)
-    if(B > R and B > G):
+    if (B > R and B > G):
         hue = 4 + (R - G) / (max_val - min_val)
     
     hue = hue * 60
     
-    if(hue < 0):
+    if (hue < 0):
         hue += 360
     
     return hue
