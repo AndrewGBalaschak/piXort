@@ -10,7 +10,7 @@ Once the segments are generated, they are randomly selected based on the **Effec
 
 ### Parameters
 - **Segments**
-  - **Edge Detection** - Check if you want to use edge detection instead of random segments.
+  - **Edge Detection** - Check if you want to use edge detection instead of random segments. Edge detection generally results in more coherence in the sorted image since it will preserve the edges.
   - **Edge Threshold** - Higher values = more edges, lower values = fewer edges.
   - **Length** - Length of a segment in pixels. Lengths greater than the respective dimension of the image will process the entire row/column as one segment.
   - **Random Length Multiplier** - Random multiplier for segment size, relative to segment size.
@@ -20,7 +20,7 @@ Once the segments are generated, they are randomly selected based on the **Effec
   - **Sort By** - Criteria by which pixels are sorted.
     - **Hue** - Sorts pixels by their hue, in degrees.
     - **Saturation** - Sorts pixels by their saturation (color intensity).
-    - **Luminance** - Sorts pixels by their overall brightness.
+    - **Luminance** - Sorts pixels by their overall brightness. This is a good default choice since our eyes are most sensitive to changes in luminosity.
     - **Red** - Sorts pixels by value of the Red channel.
     - **Green** - Sorts pixels by value of the Green channel.
     - **Blue** - Sorts pixels by value of the Blue channel.
