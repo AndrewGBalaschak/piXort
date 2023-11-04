@@ -36,7 +36,7 @@ def get_edges(edge_threshold: float):
     globals.edges.putdata(pixels)
 
 # Computes the segments array, segment mask, and sets the segments orientation
-def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str, detect_edges: bool, edge_threshold: float):
+def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str, detect_edges: bool):
     # If we are being trolled
     if(segment_size==0):
         return
@@ -45,7 +45,7 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     segments.clear()
     segments_mask.clear()
     
-    # Use global segment orientation
+    # Set global segment orientation
     global segment_orientation
 
     # Rotate 90 degrees for vertical segments
@@ -87,12 +87,15 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
                 # Move to next segment
                 x = x + temp_segment_size
 
+            # Add any remainder
+            segments.append(row[x:])
+
+            # Check if segment is to be processed, add to segments mask array
+            segments_mask.append(random.random() <= segment_probability)
+
     # If we are using edge detection
     else:
         # Load edge data
-        if not globals.edges:
-            get_edges(edge_threshold)
-
         edges = globals.edges.load()
 
         for y in range(height):
@@ -233,7 +236,7 @@ def get_hue(pixel):
         hue = 4 + (R - G) / (max_val - min_val)
     
     hue = hue * 60
-
+    
     if(hue < 0):
         hue += 360
     

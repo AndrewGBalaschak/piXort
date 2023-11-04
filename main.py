@@ -192,7 +192,7 @@ def update_segments_visibility():
         segment_random_scale['state'] = 'disabled'
         segment_random_label['state'] = 'disabled'
         segment_random_scale_readout['state'] = 'disabled'
-        update_display_edges()
+        threading.Thread(target=update_display_edges).start()
     else:
         segment_size_label['state'] = 'enabled'
         segment_size_entry['state'] = 'enabled'
@@ -412,7 +412,10 @@ def sort():
         apply_button['state'] = 'disabled'
 
         # Perform computation
-        sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get(), segment_edge_thresh_scale.get())
+        if not globals.edges:
+            sort_pixels.get_edges(segment_edge_thresh_scale.get())
+
+        sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get())
         sort_pixels.sort_pixels(sort_direction_var.get(), sort_criteria_var.get())
 
         # Enable buttons
@@ -438,7 +441,9 @@ def drift():
         apply_button['state'] = 'disabled'
 
         # Perform computation
-        sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get(), segment_edge_thresh_scale.get())
+        if not globals.edges:
+            sort_pixels.get_edges(segment_edge_thresh_scale.get())
+        sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get())
         sort_pixels.drift_pixels(int(drift_iter_entry.get()), drift_probability_scale.get())
 
         # Enable buttons

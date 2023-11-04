@@ -1,0 +1,10 @@
+edge_detect = False
+edge_threshold = 0.5
+length = 256
+length_multiplier = 0
+effect_probability = 1
+orientation = 'Horizontal'
+sort_by = 'Luminance'
+sort_direction = 'Standard'
+drift_iterations = 16
+drift_probability = 0.5
