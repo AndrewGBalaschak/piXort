@@ -11,91 +11,92 @@ import sort_pixels
 # Import global image variables 
 import globals
 
-# Clears the image onscreen
-def clear(event = None):
-    globals.original_image = None
-    globals.sort_input = None
-    globals.sort_output = None
-    globals.display_image = None
-    update_display()
-
-# Resets any sorting and brings back the original image
-def reset(event = None):
-    if globals.original_image:
-        globals.display_image = globals.original_image
-        update_display()
-
-# Pop off the undo stack and push onto redo stack
-def undo(event = None):
-    if len(globals.undo_stack) > 0:
-        globals.redo_stack.append(globals.display_image.copy())
-        globals.display_image = globals.undo_stack.pop()
-
-        update_display()
-
-    else:
-        print('Nothing to undo!')
-
-# Pop off the redo stack and push onto undo stack
-def redo(event = None):
-    if len(globals.redo_stack) > 0:
-        globals.undo_stack.append(globals.display_image.copy())
-        globals.display_image = globals.redo_stack.pop()
-
-        update_display()
-
-    else:
-        print('Nothing to redo!')
-
-# Undoes all transformations and revents to the original image
-def reset(event = None):
-    if globals.original_image:
-        globals.display_image = globals.original_image
-        globals.sort_input = globals.original_image.copy()
-        globals.display_image = globals.original_image
-        
-        # Clear any old images
-        globals.undo_stack.clear()
-        globals.redo_stack.clear()
-        globals.sort_output = None
-        update_display()
-
-# Open a file dialog to load a file
-def open_file_dialog(event = None):
-    file_path = filedialog.askopenfilename(filetypes=[('Image files', '*.png *.jpg *.jpeg *.bmp *.gif *.ppm *.pgm *.pbm')])
-    
-    if file_path:
-        # Load the selected image using Pillow
-        globals.original_image = Image.open(file_path)
-        reset()
-
-# Opens a file dialog to save the image that is currently on screen
-def save_file_dialog(event = None):
-    if globals.display_image and globals.sort_output:
-        save_path = filedialog.asksaveasfilename(defaultextension='.png', filetypes=[('PNG files', '*.png')])
-        if save_path:
-            globals.display_image.save(save_path)
-
-# Updates the image displayed in the GUI
-def update_display():
-    if not globals.display_image:
-        globals.display_image = globals.empty_image
-
-    # Copy the image to be displayed into the thumbnail buffer
-    globals.display_image_thumb = globals.display_image.copy()
-
-    # Create the thumbnail for display
-    globals.display_image_thumb.thumbnail(globals.thumb_size)
-
-    # Create a TKinter object for display
-    display_image_tk = ImageTk.PhotoImage(globals.display_image_thumb)
-
-    # Update the display label to hold the objcet
-    display_label.config(image=display_image_tk)
-    display_label.image = display_image_tk
-
-
 if __name__ == '__main__':
+    # Clears the image onscreen
+    def clear(event = None):
+        globals.original_image = None
+        globals.sort_input = None
+        globals.sort_output = None
+        globals.display_image = None
+        update_display()
+
+    # Resets any sorting and brings back the original image
+    def reset(event = None):
+        if globals.original_image:
+            globals.display_image = globals.original_image
+            update_display()
+
+    # Pop off the undo stack and push onto redo stack
+    def undo(event = None):
+        if len(globals.undo_stack) > 0:
+            globals.redo_stack.append(globals.display_image.copy())
+            globals.display_image = globals.undo_stack.pop()
+
+            update_display()
+
+        else:
+            print('Nothing to undo!')
+
+    # Pop off the redo stack and push onto undo stack
+    def redo(event = None):
+        if len(globals.redo_stack) > 0:
+            globals.undo_stack.append(globals.display_image.copy())
+            globals.display_image = globals.redo_stack.pop()
+
+            update_display()
+
+        else:
+            print('Nothing to redo!')
+
+    # Undoes all transformations and revents to the original image
+    def reset(event = None):
+        if globals.original_image:
+            globals.display_image = globals.original_image
+            globals.sort_input = globals.original_image.copy()
+            globals.display_image = globals.original_image
+            
+            # Clear any old images
+            globals.undo_stack.clear()
+            globals.redo_stack.clear()
+            globals.sort_output = None
+            update_display()
+
+    # Open a file dialog to load a file
+    def open_file_dialog(event = None):
+        file_path = filedialog.askopenfilename(filetypes=[('Image files', '*.png *.jpg *.jpeg *.bmp *.gif *.ppm *.pgm *.pbm')])
+        
+        if file_path:
+            # Load the selected image using Pillow
+            globals.original_image = Image.open(file_path)
+            reset()
+
+    # Opens a file dialog to save the image that is currently on screen
+    def save_file_dialog(event = None):
+        if globals.display_image and globals.sort_output:
+            save_path = filedialog.asksaveasfilename(defaultextension='.png', filetypes=[('PNG files', '*.png')])
+            if save_path:
+                globals.display_image.save(save_path)
+
+    # Updates the image displayed in the GUI
+    def update_display():
+        if not globals.display_image:
+            globals.display_image = globals.empty_image
+
+        # Copy the image to be displayed into the thumbnail buffer
+        globals.display_image_thumb = globals.display_image.copy()
+
+        # Create the thumbnail for display
+        globals.display_image_thumb.thumbnail(globals.thumb_size)
+
+        # Create a TKinter object for display
+        display_image_tk = ImageTk.PhotoImage(globals.display_image_thumb)
+
+        # Update the display label to hold the objcet
+        display_label.config(image=display_image_tk)
+        display_label.image = display_image_tk
+
+
+
     #################### ---------- MAIN WINDOW ---------- ####################
     # Load the default image
     globals.empty_image = Image.open('images/empty.png')
@@ -361,6 +362,10 @@ if __name__ == '__main__':
     drift_probability_scale_readout.grid(row=2, column=2, sticky='W')
     update_drift_probability('0.5')
 
+    drift_max_label = ttk.Label(drift_frame, text='Maximum Drift')
+    drift_max_check = ttk.Checkbutton(drift_frame)
+    drift_max_label.grid(row=3, column=0, sticky='E')
+    drift_max_check.grid(row=3, column=1, sticky='W')
 
 
     #################### ---------- PROGRESS BAR ---------- ####################
@@ -469,7 +474,6 @@ if __name__ == '__main__':
     #################### ---------- IMAGE ---------- ####################
     display_label = ttk.Label(root)
     display_label.grid(row=0, column=2, rowspan=1, sticky='NSEW')
-
 
 
 
