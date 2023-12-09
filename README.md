@@ -46,6 +46,4 @@ Input                    |  Output
 - Bubble sort
   - Variable iteration count
 - Advanced features
-  - Repeat sorting
   - Custom sort functions?
-- Multiprocessing?
