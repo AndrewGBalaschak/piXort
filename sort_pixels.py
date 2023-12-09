@@ -1,6 +1,7 @@
 from PIL import Image, ImageFilter
 import random
 import multiprocessing
+import math
 
 # Import global image variables
 import globals
@@ -284,15 +285,36 @@ def get_lum(pixel):
 
 # Returns the Red of a pixel
 def get_red(pixel):
-    return pixel[0] / 255
+    R = pixel[0] / 255
+    G = pixel[1] / 255
+    B = pixel[2] / 255
+
+    if G > B:
+        return R - G
+    else:
+        return R - B
 
 # Returns the Green of a pixel
 def get_grn(pixel):
-    return pixel[1] / 255
+    R = pixel[0] / 255
+    G = pixel[1] / 255
+    B = pixel[2] / 255
+
+    if R > B:
+        return G - R
+    else:
+        return G - B
 
 # Returns the Blue of a pixel
 def get_blu(pixel):
-    return pixel[2] / 255
+    R = pixel[0] / 255
+    G = pixel[1] / 255
+    B = pixel[2] / 255
+
+    if R > G:
+        return B - R
+    else:
+        return B - G
 
 # Applies the sort and allows the sorted image to be sorted again
 def apply_sort():
