@@ -218,7 +218,8 @@ if __name__ == '__main__':
         segment_edge_thresh_readout['text'] = str(round(float(value)*100)) + '%'
 
     segment_edge_thresh_label = ttk.Label(segments_frame, text='Edge Threshold')
-    segment_edge_thresh_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=0.5, command=lambda x:[update_edge_detect_label(x), threading.Thread(target=update_display_edges).start()])
+    segment_edge_thresh_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=0.5, command=lambda x:[update_edge_detect_label(x)])
+    segment_edge_thresh_scale.bind("<ButtonRelease-1>", lambda x:[threading.Thread(target=update_display_edges).start()])
     segment_edge_thresh_label.grid(row=2, column=0, sticky='E')
     segment_edge_thresh_scale.grid(row=2, column=1, sticky='W')
     segment_edge_thresh_readout = ttk.Label(segments_frame, width=5, text=str(round(float(segment_edge_thresh_scale.get()), 2)))
