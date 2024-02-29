@@ -11,6 +11,7 @@ import sort_pixels
 # Import global image variables 
 import globals
 
+# This basically makes sure that threads spawned for multiprocessing don't generate extra UI windows
 if __name__ == '__main__':
     # Clears the image onscreen
     def clear(event = None):
@@ -72,7 +73,7 @@ if __name__ == '__main__':
 
     # Opens a file dialog to save the image that is currently on screen
     def save_file_dialog(event = None):
-        if globals.display_image and globals.sort_output:
+        if globals.display_image:
             save_path = filedialog.asksaveasfilename(defaultextension='.png', filetypes=[('PNG files', '*.png')])
             if save_path:
                 globals.display_image.save(save_path)
@@ -420,7 +421,7 @@ if __name__ == '__main__':
             # Perform computation
             if not globals.edges and segment_edge_detect_var.get():
                 sort_pixels.get_edges(segment_edge_thresh_scale.get())
-            sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get())
+            sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get())
             sort_pixels.sort_pixels(sort_direction_var.get(), sort_criteria_var.get(), segment_probability_scale.get())
 
             # Enable buttons
@@ -448,7 +449,7 @@ if __name__ == '__main__':
             # Perform computation
             if not globals.edges and segment_edge_detect_var.get():
                 sort_pixels.get_edges(segment_edge_thresh_scale.get())
-            sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_probability_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get())
+            sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get())
             sort_pixels.drift_pixels(int(drift_iter_entry.get()), drift_probability_scale.get(), segment_probability_scale.get())
 
             # Enable buttons

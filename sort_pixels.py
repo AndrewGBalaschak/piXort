@@ -7,7 +7,6 @@ import math
 import globals
 
 segments = []               # Stores the segments of an image
-segments_mask = []          # Mask of whether a segment gets processed or not
 segment_orientation = ''    # Stores orientation of segments
 
 # Computes the segments array using the detected edges of the image
@@ -39,14 +38,13 @@ def get_edges(edge_threshold: float):
     globals.edges.putdata(pixels)
 
 # Computes the segments array, segment mask, and sets the segments orientation
-def get_segments(segment_size: int, segment_random: float, segment_probability: float, orientation: str, detect_edges: bool):
+def get_segments(segment_size: int, segment_random: float, orientation: str, use_edges: bool):
     # If we are being trolled
     if (segment_size==0):
         return
     
     # Clear old segments
     segments.clear()
-    segments_mask.clear()
     
     # Set global segment orientation
     global segment_orientation
@@ -54,7 +52,7 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     # Rotate 90 degrees for vertical segments
     if (orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
-        if detect_edges:
+        if use_edges:
             globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_90)
         segment_orientation = 'Vertical'
     else:
@@ -67,12 +65,11 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
     width, height = globals.sort_input.size
 
     # If we are using random segments
-    if not detect_edges:
+    if not use_edges:
         for y in range(height):
             row = []
             # Get current row of pixels
-            for x in range(width):
-                row.append(pixels[x, y])
+            row = [pixels[x, y] for x in range(width)]
             
             # Split row into segments
             x = 0
@@ -83,9 +80,6 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
 
                 # Add the segment to the segments array
                 segments.append(row[x:x+temp_segment_size].copy())
-
-                # Check if segment is to be processed, add to segments mask array
-                segments_mask.append(random.random() <= segment_probability)
                 
                 # Move to next segment
                 x = x + temp_segment_size
@@ -98,8 +92,7 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
         for y in range(height):
             row = []
             # Get current row of pixels
-            for x in range(width):
-                row.append(pixels[x, y])
+            row = [pixels[x, y] for x in range(width)]
             
             # Split row into segments
             x = 0
@@ -111,9 +104,6 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
                 if edges[x, y] != last_edge:
                     # Add the edge to segments
                     segments.append(row[last_x:x])
-
-                    # Check if segment is to be processed, add to segments mask array
-                    segments_mask.append(random.random() <= segment_probability)
                     
                     last_edge = edges[x, y]
                     last_x = x
@@ -125,19 +115,15 @@ def get_segments(segment_size: int, segment_random: float, segment_probability: 
             # Add any remainder
             segments.append(row[last_x:x])
 
-            # Check if segment is to be processed, add to segments mask array
-            segments_mask.append(random.random() <= segment_probability)
-
 
     # Correct rotation
     if (segment_orientation == 'Vertical'):
         globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
-        if detect_edges:
+        if use_edges:
             globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_270)
 
 # Sort helper for multiprocessing
 def sort_helper(segment, sort_criteria, invert_sort, segment_probability, i):
-    # if (segments_mask[i]):
     if (random.random() <= segment_probability):
         if (sort_criteria == 'Hue'):
             return sorted(segment, key=get_hue, reverse=invert_sort)
