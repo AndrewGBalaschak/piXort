@@ -4,15 +4,24 @@ from tkinter import filedialog
 from ttkthemes import ThemedTk
 from PIL import Image, ImageTk
 import threading
+import json
 
 # Import my sorting functions
 import sort_pixels
+
+import palettize
 
 # Import global image variables 
 import globals
 
 # This basically makes sure that threads spawned for multiprocessing don't generate extra UI windows
 if __name__ == '__main__':
+
+    def load_palettes():
+        with open('palettes.json', 'r') as f:
+            data = json.load(f)
+            return data.get('palettes', {})
+    
     # Clears the image onscreen
     def clear(event = None):
         globals.original_image = None
@@ -113,6 +122,9 @@ if __name__ == '__main__':
     root.iconphoto(True, icon)
     root.iconwindow()
 
+    # Load palettes
+    palettes = load_palettes()
+
     # About popup window
     def about_window():
         about = tk.Toplevel(root)
@@ -162,23 +174,124 @@ if __name__ == '__main__':
     #################### ---------- BASIC / ADVANCED TABS ---------- ####################
     # Create basic and advanced feature tabs
     tabControl = ttk.Notebook(root)
-    tab_basic = ttk.Frame(tabControl)
-    tab_advan = ttk.Frame(tabControl)
+    tab_palette = ttk.Frame(tabControl)
+    tab_sorting = ttk.Frame(tabControl)
 
-    tabControl.add(tab_basic, text ='Basic', sticky='NSEW')
-    tabControl.add(tab_advan, text ='Advanced', sticky='NSEW')
+    tabControl.add(tab_palette, text='Palette', sticky='NSEW')
+    tabControl.add(tab_sorting, text ='Sort Pixels', sticky='NSEW')
     tabControl.grid(row=0, column=0, sticky='NSEW')
 
-    tab_basic.grid_rowconfigure(0, weight=1)
-    tab_basic.grid_rowconfigure(1, weight=1)
-    tab_basic.grid_columnconfigure(0, weight=1)
-    tab_basic.grid_columnconfigure(1, weight=1)
+    tab_sorting.grid_rowconfigure(0, weight=1)
+    tab_sorting.grid_rowconfigure(1, weight=1)
+    tab_sorting.grid_columnconfigure(0, weight=1)
+    tab_sorting.grid_columnconfigure(1, weight=1)
+
+
+    #################### ---------- RESOLUTION OPTIONS ---------- ####################
+    def resize(event = None):
+        globals.sort_output = globals.sort_input.resize((int(resolution_x_entry.get()), int(resolution_y_entry.get())), Image.Resampling.NEAREST)
+
+        # Set the display image to reference the ressized image
+        globals.display_image = globals.sort_output
+
+        update_display()
+
+    def compute_width(new_height):
+        width, height = globals.sort_input.size
+        new_width = new_height * (width / height)
+        
+        return new_width
+    
+    def compute_height(new_width):
+        width, height = globals.sort_input.size
+        new_height = new_width * (height / width)
+        
+        return new_height
+
+    resolution_frame = ttk.Frame(tab_palette, relief=tk.SUNKEN, padding=(5,5,5,5))
+    resolution_frame.grid(row=0, column=0, sticky='EW')
+    
+    resolution_frame.grid_rowconfigure(0, weight=1)
+    resolution_frame.grid_columnconfigure(0, weight=1)
+    resolution_frame.grid_columnconfigure(1, weight=1)
+
+    # Resolution header
+    resolution_header = ttk.Label(resolution_frame, text='Resolution', font=('TkDefaultFont',24))
+    resolution_header.grid(row=0, column=0, columnspan=3)
+
+    # Resolution X
+    resolution_x_label = ttk.Label(resolution_frame, text='Width (Pixels)')
+    resolution_x_entry = ttk.Entry(resolution_frame, width=10)
+    resolution_x_entry.insert(0, '128')      # Set default value
+    resolution_x_label.grid(row=1, column=0, sticky='E')
+    resolution_x_entry.grid(row=1, column=1, sticky='W')
+    resolution_x_entry.bind('<FocusOut>', resize)
+
+    # Resolution Y
+    resolution_y_label = ttk.Label(resolution_frame, text='Height (Pixels)')
+    resolution_y_entry = ttk.Entry(resolution_frame, width=10)
+    resolution_y_entry.insert(0, '128')      # Set default value
+    resolution_y_label.grid(row=2, column=0, sticky='E')
+    resolution_y_entry.grid(row=2, column=1, sticky='W')
+    resolution_y_entry.bind('<FocusOut>', resize)
+
+    # Maintain Aspect Ratio
+    resolution_aspect_ratio_label = ttk.Label(resolution_frame, text='Maintain Aspect Ratio')
+
+    resolution_aspect_ratio_var = tk.BooleanVar(value=False)
+    resolution_aspect_ratio_check = ttk.Checkbutton(resolution_frame, variable=resolution_aspect_ratio_var)
+
+    resolution_aspect_ratio_label.grid(row=3, column=0, sticky='E')
+    resolution_aspect_ratio_check.grid(row=3, column=1, sticky='W')
+
+
+    #################### ---------- PALETTE OPTIONS ---------- ####################
+    palette_frame = ttk.Frame(tab_palette, relief=tk.SUNKEN)
+    palette_frame.grid(row=1, column=0, sticky='EW')
+
+    palette_frame.grid_rowconfigure(0, weight=1)
+    palette_frame.grid_columnconfigure(0, weight=1)
+    palette_frame.grid_columnconfigure(1, weight=1)
+
+    # Palette header
+    palette_header = ttk.Label(palette_frame, text='Palette', font=('TkDefaultFont',24))
+    palette_header.grid(row=0, column=0, columnspan=3)
+
+    def apply_palette(event = None):
+        selection = palette_selector_combo.get()
+        algorithm = palette_algorithm_selector_combo.get()
+
+        if (selection == 'Full'):
+            return
+        
+        if (selection in palettes):
+            palette = palettes.get(selection)
+            palettize.palettize_helper(palette, algorithm)
+            update_display()
+
+    # Palette selector
+    palette_selector_label = ttk.Label(palette_frame, text='Palette Choice')
+    palette_selector_combo = ttk.Combobox(palette_frame, state='readonly', values=list(palettes.keys()))
+    palette_selector_combo.set('Full')
+    palette_selector_combo.bind('<<ComboboxSelected>>', apply_palette)
+
+    palette_selector_label.grid(row=1, column=0, sticky='E')
+    palette_selector_combo.grid(row=1, column=1, sticky='W')
+
+    # Algorithm selector
+    palette_algorithm_selector_label = ttk.Label(palette_frame, text='Algorithm Choice')
+    palette_algorithm_selector_combo = ttk.Combobox(palette_frame, state='readonly', values=palettize.algorithms)
+    palette_algorithm_selector_combo.set('Euclidian Distance')
+    palette_algorithm_selector_combo.bind('<<ComboboxSelected>>', apply_palette)
+
+    palette_algorithm_selector_label.grid(row=2, column=0, sticky='E')
+    palette_algorithm_selector_combo.grid(row=2, column=1, sticky='W')
 
 
 
     #################### ---------- SEGMENT OPTIONS ---------- ####################
     # Frame for segment config
-    segments_frame = ttk.Frame(tab_basic, relief=tk.SUNKEN, padding=(5,5,5,5))
+    segments_frame = ttk.Frame(tab_sorting, relief=tk.SUNKEN, padding=(5,5,5,5))
     segments_frame.grid(row=0, column=0, sticky='EW')
 
     segments_frame.grid_rowconfigure(0, weight=1)
@@ -284,7 +397,7 @@ if __name__ == '__main__':
 
     #################### ---------- SORT OPTIONS ---------- ####################
     # Frame for sort config
-    sort_frame = ttk.Frame(tab_basic, relief=tk.SUNKEN, padding=(5,5,5,5))
+    sort_frame = ttk.Frame(tab_sorting, relief=tk.SUNKEN, padding=(5,5,5,5))
     sort_frame.grid(row=1, column=0, sticky='EW')
 
     sort_frame.grid_rowconfigure(0, weight=1)
@@ -333,7 +446,7 @@ if __name__ == '__main__':
 
     #################### ---------- PIXEL DRIFT OPTIONS ---------- ####################
     # Frame for segment config
-    drift_frame = ttk.Frame(tab_basic, relief=tk.SUNKEN, padding=(5,5,5,5))
+    drift_frame = ttk.Frame(tab_sorting, relief=tk.SUNKEN, padding=(5,5,5,5))
     drift_frame.grid(row=2, column=0, sticky='EW')
 
     drift_frame.grid_rowconfigure(0, weight=1)

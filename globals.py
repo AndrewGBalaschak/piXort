@@ -9,6 +9,6 @@ empty_image = None          # Stores the empty image used when no image is loade
 
 display_image = None        # Stores a reference to the image that is displayed
 
-thumb_size = (512,512)      # Thumbnail size
+thumb_size = (1024,1024)      # Thumbnail size
 
 undo_levels = 5             # Undo levels
