@@ -12,7 +12,7 @@ segment_orientation = ''    # Stores orientation of segments
 # Computes the segments array using the detected edges of the image
 def get_edges(edge_threshold: float):
     # Load pixel data
-    edges = globals.sort_input.copy()
+    edges = globals.input_image.copy()
     edges = edges.convert('L')
 
     # Apply edge detection
@@ -21,7 +21,7 @@ def get_edges(edge_threshold: float):
     pixels = []
 
     # Get dimensions
-    width, height = globals.sort_input.size
+    width, height = globals.input_image.size
 
     # Loop through rows
     for y in range(height):
@@ -51,7 +51,7 @@ def get_segments(segment_size: int, segment_random: float, orientation: str, use
 
     # Rotate 90 degrees for vertical segments
     if (orientation == 'Vertical'):
-        globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_90)
+        globals.input_image = globals.input_image.transpose(method=Image.Transpose.ROTATE_90)
         if use_edges:
             globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_90)
         segment_orientation = 'Vertical'
@@ -59,10 +59,10 @@ def get_segments(segment_size: int, segment_random: float, orientation: str, use
         segment_orientation = 'Horizontal'
 
     # Load pixel data
-    pixels = globals.sort_input.load()
+    pixels = globals.input_image.load()
 
     # Get dimensions
-    width, height = globals.sort_input.size
+    width, height = globals.input_image.size
 
     # If we are using random segments
     if not use_edges:
@@ -118,7 +118,7 @@ def get_segments(segment_size: int, segment_random: float, orientation: str, use
 
     # Correct rotation
     if (segment_orientation == 'Vertical'):
-        globals.sort_input = globals.sort_input.transpose(method=Image.Transpose.ROTATE_270)
+        globals.input_image = globals.input_image.transpose(method=Image.Transpose.ROTATE_270)
         if use_edges:
             globals.edges = globals.edges.transpose(method=Image.Transpose.ROTATE_270)
 
@@ -147,13 +147,13 @@ def sort_pixels(invert_sort: bool, sort_criteria: str, segment_probability: floa
     pool.close()
 
     # Get dimensions for output
-    width, height = globals.sort_input.size
+    width, height = globals.input_image.size
     
     # Make new image for sorted pixels
     if (segment_orientation == 'Horizontal'):
-        globals.sort_output = Image.new('RGB', (width, height))
+        globals.output_image = Image.new('RGB', (width, height))
     elif (segment_orientation == 'Vertical'):
-        globals.sort_output = Image.new('RGB', (height, width))
+        globals.output_image = Image.new('RGB', (height, width))
 
     # Write segments to array of pixels
     pixels = []
@@ -161,14 +161,14 @@ def sort_pixels(invert_sort: bool, sort_criteria: str, segment_probability: floa
         for pixel in segment:
             pixels.append(pixel)
     
-    globals.sort_output.putdata(pixels)
+    globals.output_image.putdata(pixels)
 
     # Correct rotation
     if (segment_orientation == 'Vertical'):
-        globals.sort_output = globals.sort_output.transpose(method=Image.Transpose.ROTATE_270)
+        globals.output_image = globals.output_image.transpose(method=Image.Transpose.ROTATE_270)
 
     # Set the display image to reference the sorted image
-    globals.display_image = globals.sort_output
+    globals.display_image = globals.output_image
 
 # Drift helper for multiprocessing
 def drift_helper(segment, drift_iterations, drift_probability, segment_probability, i):
@@ -192,13 +192,13 @@ def drift_pixels(drift_iterations: int, drift_probability: float, segment_probab
     pool.close()
 
     # Get dimensions for output
-    width, height = globals.sort_input.size
+    width, height = globals.input_image.size
 
     # Make new image for sorted pixels
     if (segment_orientation == 'Horizontal'):
-        globals.sort_output = Image.new('RGB', (width, height))
+        globals.output_image = Image.new('RGB', (width, height))
     elif (segment_orientation == 'Vertical'):
-        globals.sort_output = Image.new('RGB', (height, width))
+        globals.output_image = Image.new('RGB', (height, width))
 
     # Write segments to array of pixels
     pixels = []
@@ -206,14 +206,14 @@ def drift_pixels(drift_iterations: int, drift_probability: float, segment_probab
         for pixel in segment:
             pixels.append(pixel)
 
-    globals.sort_output.putdata(pixels)
+    globals.output_image.putdata(pixels)
 
     # Correct rotation
     if (segment_orientation == 'Vertical'):
-        globals.sort_output = globals.sort_output.transpose(method=Image.Transpose.ROTATE_270)
+        globals.output_image = globals.output_image.transpose(method=Image.Transpose.ROTATE_270)
 
     # Set the display image to reference the sorted image
-    globals.display_image = globals.sort_output
+    globals.display_image = globals.output_image
 
 # Returns the hue of a pixel
 def get_hue(pixel):
@@ -301,22 +301,3 @@ def get_blu(pixel):
         return B - R
     else:
         return B - G
-
-# Applies the sort and allows the sorted image to be sorted again
-def apply_sort():
-    if globals.display_image:
-        # Add most recent image to the undo array
-        globals.undo_stack.append(globals.sort_input.copy())
-
-        # If we have more than the allowed undo levels, remove the oldest
-        while(len(globals.undo_stack) > globals.undo_levels):
-            del globals.undo_stack[0]
-
-        # Clear the redo stack
-        globals.redo_stack.clear()
-
-        # Copy the buffer referenced by the display to the input buffer
-        globals.sort_input = globals.display_image.copy()
-
-        # Clear the output buffer
-        globals.sort_output = None

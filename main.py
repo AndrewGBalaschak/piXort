@@ -9,10 +9,14 @@ import json
 # Import my sorting functions
 import sort_pixels
 
+# Import my palettize functions
 import palettize
 
 # Import global image variables 
 import globals
+
+# Import foobar167's advanced zoom
+# import advanced_zoom
 
 # This basically makes sure that threads spawned for multiprocessing don't generate extra UI windows
 if __name__ == '__main__':
@@ -25,8 +29,8 @@ if __name__ == '__main__':
     # Clears the image onscreen
     def clear(event = None):
         globals.original_image = None
-        globals.sort_input = None
-        globals.sort_output = None
+        globals.input_image = None
+        globals.output_image = None
         globals.display_image = None
         update_display()
 
@@ -62,13 +66,13 @@ if __name__ == '__main__':
     def reset(event = None):
         if globals.original_image:
             globals.display_image = globals.original_image
-            globals.sort_input = globals.original_image.copy()
+            globals.input_image = globals.original_image.copy()
             globals.display_image = globals.original_image
             
             # Clear any old images
             globals.undo_stack.clear()
             globals.redo_stack.clear()
-            globals.sort_output = None
+            globals.output_image = None
             update_display()
 
     # Open a file dialog to load a file
@@ -78,6 +82,15 @@ if __name__ == '__main__':
         if file_path:
             # Load the selected image using Pillow
             globals.original_image = Image.open(file_path)
+
+            width, height = globals.original_image.size
+
+            resolution_x_entry.delete(0, 'end')
+            resolution_x_entry.insert(0, width)
+
+            resolution_y_entry.delete(0, 'end')
+            resolution_y_entry.insert(0, height)
+
             reset()
 
     # Opens a file dialog to save the image that is currently on screen
@@ -91,12 +104,28 @@ if __name__ == '__main__':
     def update_display():
         if not globals.display_image:
             globals.display_image = globals.empty_image
+        
+        width, height = globals.display_image.size
 
         # Copy the image to be displayed into the thumbnail buffer
         globals.display_image_thumb = globals.display_image.copy()
 
-        # Create the thumbnail for display
-        globals.display_image_thumb.thumbnail(globals.thumb_size)
+        # If the image is larger than the thumbnail size
+        if (width > globals.thumb_size[0] or height > globals.thumb_size[1]):
+            # Create the thumbnail for display
+            globals.display_image_thumb.thumbnail(globals.thumb_size)
+
+        # Otherwise, the image needs to be magnified
+
+        # If height is the limiting dimension
+        elif (height >= width):
+            aspect_ratio = width / height
+            globals.display_image_thumb = globals.display_image_thumb.resize((round(globals.thumb_size[0] * aspect_ratio), globals.thumb_size[1]), Image.Resampling.NEAREST)
+
+        # If width is the limiting dimension
+        else:
+            aspect_ratio = height / width
+            globals.display_image_thumb = globals.display_image_thumb.resize((globals.thumb_size[0], round(globals.thumb_size[1] * aspect_ratio)), Image.Resampling.NEAREST)
 
         # Create a TKinter object for display
         display_image_tk = ImageTk.PhotoImage(globals.display_image_thumb)
@@ -104,6 +133,26 @@ if __name__ == '__main__':
         # Update the display label to hold the objcet
         display_label.config(image=display_image_tk)
         display_label.image = display_image_tk
+        
+    
+    # Applies the transformation and allows the processed image to be processed again
+    def apply_transform():
+        if globals.display_image:
+            # Add most recent image to the undo array
+            globals.undo_stack.append(globals.input_image.copy())
+
+            # If we have more than the allowed undo levels, remove the oldest
+            while(len(globals.undo_stack) > globals.undo_levels):
+                del globals.undo_stack[0]
+
+            # Clear the redo stack
+            globals.redo_stack.clear()
+
+            # Copy the buffer referenced by the display to the input buffer
+            globals.input_image = globals.display_image.copy()
+
+            # Clear the output buffer
+            globals.output_image = None
 
 
 
@@ -122,7 +171,7 @@ if __name__ == '__main__':
     root.iconphoto(True, icon)
     root.iconwindow()
 
-    # Load palettes
+    # Load palette options
     palettes = load_palettes()
 
     # About popup window
@@ -189,21 +238,21 @@ if __name__ == '__main__':
 
     #################### ---------- RESOLUTION OPTIONS ---------- ####################
     def resize(event = None):
-        globals.sort_output = globals.sort_input.resize((int(resolution_x_entry.get()), int(resolution_y_entry.get())), Image.Resampling.NEAREST)
+        globals.resized_image = globals.input_image.resize((int(resolution_x_entry.get()), int(resolution_y_entry.get())), Image.Resampling.NEAREST)
 
-        # Set the display image to reference the ressized image
-        globals.display_image = globals.sort_output
+        # Set the display image to reference the resized image
+        globals.display_image = globals.resized_image
 
         update_display()
 
     def compute_width(new_height):
-        width, height = globals.sort_input.size
+        width, height = globals.input_image.size
         new_width = new_height * (width / height)
         
         return new_width
     
     def compute_height(new_width):
-        width, height = globals.sort_input.size
+        width, height = globals.input_image.size
         new_height = new_width * (height / width)
         
         return new_height
@@ -245,9 +294,44 @@ if __name__ == '__main__':
     resolution_aspect_ratio_check.grid(row=3, column=1, sticky='W')
 
 
+
+    #################### ---------- DITHER OPTIONS ---------- ####################
+    dither_frame = ttk.Frame(tab_palette, relief=tk.SUNKEN)
+    dither_frame.grid(row=1, column=0, sticky='EW')
+
+    # Dither header
+    dither_header = ttk.Label(dither_frame, text='Dithering', font=('TkDefaultFont',24))
+    dither_header.grid(row=0, column=0, columnspan=3)
+
+    # Dither selector
+    dither_selector_label = ttk.Label(dither_frame, text='Dithering: ')
+    dither_selector_combo = ttk.Combobox(dither_frame, state='readonly', values=palettize.dithering_options)
+    dither_selector_combo.set('None')
+    dither_selector_combo.bind('<<ComboboxSelected>>', lambda x:[threading.Thread(target=apply_palette).start()])
+
+    dither_selector_label.grid(row=1, column=0, sticky='E')
+    dither_selector_combo.grid(row=1, column=1, sticky='W')
+
+    # Create a slider for dithering strength
+    def update_dither_strength_label(value):
+        dither_strength_readout['text'] = str(round(float(value)*100)) + '%'
+
+    dither_strength_label = ttk.Label(dither_frame, text='Dither Strength')
+    dither_strength_scale = ttk.Scale(dither_frame, from_=0, to=1, orient='horizontal', length=100, value=0.5, command=lambda x:[update_dither_strength_label(x)])
+    dither_strength_scale.bind("<ButtonRelease-1>", lambda x:[threading.Thread(target=apply_palette).start()])
+
+    dither_strength_label.grid(row=2, column=0, sticky='E')
+    dither_strength_scale.grid(row=2, column=1, sticky='W')
+
+    dither_strength_readout = ttk.Label(dither_frame, width=5, text=str(round(float(dither_strength_scale.get()), 2)))
+    dither_strength_readout.grid(row=2, column=2, sticky='W')
+    update_dither_strength_label(dither_strength_scale.get())
+
+
+
     #################### ---------- PALETTE OPTIONS ---------- ####################
     palette_frame = ttk.Frame(tab_palette, relief=tk.SUNKEN)
-    palette_frame.grid(row=1, column=0, sticky='EW')
+    palette_frame.grid(row=2, column=0, sticky='EW')
 
     palette_frame.grid_rowconfigure(0, weight=1)
     palette_frame.grid_columnconfigure(0, weight=1)
@@ -258,31 +342,36 @@ if __name__ == '__main__':
     palette_header.grid(row=0, column=0, columnspan=3)
 
     def apply_palette(event = None):
-        selection = palette_selector_combo.get()
-        algorithm = palette_algorithm_selector_combo.get()
+        palette_selection = palette_selector_combo.get()
+        dithering_selection = dither_selector_combo.get()
+        algorithm_selection = palette_algorithm_selector_combo.get()
 
-        if (selection == 'Full'):
+        if (palette_selection == 'Full'):
             return
         
-        if (selection in palettes):
-            palette = palettes.get(selection)
-            palettize.palettize_helper(palette, algorithm)
+        if (palette_selection in palettes and dithering_selection in palettize.dithering_options):
+            # If the image has been resized we want to use that one
+            if globals.resized_image:
+                globals.input_image = globals.resized_image
+
+            palette = palettes.get(palette_selection)
+            palettize.palettize_helper(palette, algorithm_selection, dithering_selection, dither_strength_scale.get())
             update_display()
 
     # Palette selector
-    palette_selector_label = ttk.Label(palette_frame, text='Palette Choice')
+    palette_selector_label = ttk.Label(palette_frame, text='Palette: ')
     palette_selector_combo = ttk.Combobox(palette_frame, state='readonly', values=list(palettes.keys()))
     palette_selector_combo.set('Full')
-    palette_selector_combo.bind('<<ComboboxSelected>>', apply_palette)
+    palette_selector_combo.bind('<<ComboboxSelected>>', lambda x:[threading.Thread(target=apply_palette).start()])
 
     palette_selector_label.grid(row=1, column=0, sticky='E')
     palette_selector_combo.grid(row=1, column=1, sticky='W')
 
     # Algorithm selector
-    palette_algorithm_selector_label = ttk.Label(palette_frame, text='Algorithm Choice')
+    palette_algorithm_selector_label = ttk.Label(palette_frame, text='Algorithm: ')
     palette_algorithm_selector_combo = ttk.Combobox(palette_frame, state='readonly', values=palettize.algorithms)
     palette_algorithm_selector_combo.set('Euclidian Distance')
-    palette_algorithm_selector_combo.bind('<<ComboboxSelected>>', apply_palette)
+    palette_algorithm_selector_combo.bind('<<ComboboxSelected>>', lambda x:[threading.Thread(target=apply_palette).start()])
 
     palette_algorithm_selector_label.grid(row=2, column=0, sticky='E')
     palette_algorithm_selector_combo.grid(row=2, column=1, sticky='W')
@@ -334,8 +423,10 @@ if __name__ == '__main__':
     segment_edge_thresh_label = ttk.Label(segments_frame, text='Edge Threshold')
     segment_edge_thresh_scale = ttk.Scale(segments_frame, from_=0, to=1, orient='horizontal', length=100, value=0.5, command=lambda x:[update_edge_detect_label(x)])
     segment_edge_thresh_scale.bind("<ButtonRelease-1>", lambda x:[threading.Thread(target=update_display_edges).start()])
+
     segment_edge_thresh_label.grid(row=2, column=0, sticky='E')
     segment_edge_thresh_scale.grid(row=2, column=1, sticky='W')
+    
     segment_edge_thresh_readout = ttk.Label(segments_frame, width=5, text=str(round(float(segment_edge_thresh_scale.get()), 2)))
     segment_edge_thresh_readout.grid(row=2, column=2, sticky='W')
     update_edge_detect_label(segment_edge_thresh_scale.get())
@@ -409,24 +500,13 @@ if __name__ == '__main__':
     sort_header = ttk.Label(sort_frame, text='Pixel Sorting', font=('TkDefaultFont',24))
     sort_header.grid(row=0, column=0, columnspan=3)
 
-    # Create radio buttons for sort criteria
-    seg_direction_label = ttk.Label(sort_frame, text='Sort By:')
-    seg_direction_label.grid(row=1, column=0, rowspan=6, sticky='E')
+    # Create combo box for sort criteria
+    sort_criteria_label = ttk.Label(sort_frame, text='Sort By:')
+    sort_criteria_label.grid(row=1, column=0, rowspan=6, sticky='E')
 
-    sort_criteria_var = tk.StringVar(value='Luminance')
-    sort_criteria_hue = ttk.Radiobutton(sort_frame, text='Hue', variable=sort_criteria_var, value='Hue')
-    sort_criteria_sat = ttk.Radiobutton(sort_frame, text='Saturation', variable=sort_criteria_var, value='Saturation')
-    sort_criteria_lum = ttk.Radiobutton(sort_frame, text='Luminance', variable=sort_criteria_var, value='Luminance')
-    sort_criteria_red = ttk.Radiobutton(sort_frame, text='Red', variable=sort_criteria_var, value='Red')
-    sort_criteria_grn = ttk.Radiobutton(sort_frame, text='Green', variable=sort_criteria_var, value='Green')
-    sort_criteria_blu = ttk.Radiobutton(sort_frame, text='Blue', variable=sort_criteria_var, value='Blue')
-
-    sort_criteria_hue.grid(row=1, column=1, sticky='W')
-    sort_criteria_sat.grid(row=2, column=1, sticky='W')
-    sort_criteria_lum.grid(row=3, column=1, sticky='W')
-    sort_criteria_red.grid(row=4, column=1, sticky='W')
-    sort_criteria_grn.grid(row=5, column=1, sticky='W')
-    sort_criteria_blu.grid(row=6, column=1, sticky='W')
+    sort_criteria = ttk.Combobox(sort_frame, state='readonly', values=['Hue', 'Saturation', 'Luminance', 'Red', 'Green', 'Blue'])
+    sort_criteria.set('Luminance')
+    sort_criteria.grid(row=1, column=1, sticky='W')
 
     # Create separator
     sort_separator =  ttk.Separator(sort_frame, orient='horizontal')
@@ -436,11 +516,9 @@ if __name__ == '__main__':
     sort_direction_label = ttk.Label(sort_frame, text='Sort Direction:')
     sort_direction_label.grid(row=8, column=0, rowspan=2, sticky='E')
 
-    sort_direction_var = tk.BooleanVar()
-    sort_direction_low = ttk.Radiobutton(sort_frame, text='Standard', variable=sort_direction_var, value=False)
-    sort_direction_high = ttk.Radiobutton(sort_frame, text='Inverted', variable=sort_direction_var, value=True)
-    sort_direction_low.grid(row=8, column=1, sticky='W')
-    sort_direction_high.grid(row=9, column=1, sticky='W')
+    sort_direction = ttk.Combobox(sort_frame, state='readonly', values=['Standard', 'Inverted'])
+    sort_direction.set('Standard')
+    sort_direction.grid(row=8, column=1, sticky='W')
 
 
 
@@ -490,12 +568,12 @@ if __name__ == '__main__':
 
     #################### ---------- RENDER FRAME ---------- ####################
     # Frame for render buttons
-    render_frame = ttk.Frame(root)
-    render_frame.grid(row=2, column=0, sticky='NSEW')
+    render_frame = ttk.Frame(tab_sorting)
+    render_frame.grid(row=4, column=0, sticky='NSEW')
 
     # Displays edges
     def update_display_edges():
-        if segment_edge_detect_var.get() and globals.sort_input:
+        if segment_edge_detect_var.get() and globals.input_image:
             # Display progress bar
             pb.grid(row=2, column=2, sticky='EW', padx=100)
             pb.start(25)
@@ -521,7 +599,7 @@ if __name__ == '__main__':
 
     # Sorts image based on parameters
     def sort():
-        if globals.sort_input:
+        if globals.input_image:
             # Display progress bar
             pb.grid(row=2, column=2, sticky='EW', padx=100)
             pb.start(25)
@@ -535,7 +613,7 @@ if __name__ == '__main__':
             if not globals.edges and segment_edge_detect_var.get():
                 sort_pixels.get_edges(segment_edge_thresh_scale.get())
             sort_pixels.get_segments(int(segment_size_entry.get()), segment_random_scale.get(), segment_orientation_var.get(), segment_edge_detect_var.get())
-            sort_pixels.sort_pixels(sort_direction_var.get(), sort_criteria_var.get(), segment_probability_scale.get())
+            sort_pixels.sort_pixels(sort_direction.get(), sort_criteria.get(), segment_probability_scale.get())
 
             # Enable buttons
             sort_button['state'] = 'normal'
@@ -549,7 +627,7 @@ if __name__ == '__main__':
             update_display()
 
     def drift():
-        if globals.sort_input:
+        if globals.input_image:
             # Display progress bar
             pb.grid(row=2, column=2, sticky='EW', padx=100)
             pb.start(25)
@@ -579,7 +657,7 @@ if __name__ == '__main__':
     # Create buttons for rendering
     sort_button = ttk.Button(render_frame, text='Preview Sort', width=20, command=lambda:[threading.Thread(target=sort).start()])
     shuffle_button = ttk.Button(render_frame, text='Preview Drift', width=20, command=lambda:[threading.Thread(target=drift).start()])
-    apply_button = ttk.Button(render_frame, text='Apply', width=44, command=sort_pixels.apply_sort)
+    apply_button = ttk.Button(render_frame, text='Apply', width=44, command=apply_transform)
     sort_button.grid(row=0, column=0)
     shuffle_button.grid(row=0, column=1)
     apply_button.grid(row=1, column=0, columnspan=2)
@@ -589,6 +667,9 @@ if __name__ == '__main__':
     #################### ---------- IMAGE ---------- ####################
     display_label = ttk.Label(root)
     display_label.grid(row=0, column=2, rowspan=1, sticky='NSEW')
+
+    # display_canvas = advanced_zoom.CanvasImage(root, globals.empty_image)
+    # display_canvas.grid(row=0, column=2, rowspan=1, sticky='NSEW')
 
 
 
